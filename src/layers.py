@@ -22,11 +22,15 @@ def build_H_recursive(D):
 
 
 class BasicWHVILinear(nn.Module):
-    def __init__(self, D, activation=F.relu):
+    def __init__(self, D, activation=F.relu, w_prior=None):
         """
-        Bayesian feed forward layer.
-        Uses WHVI to estimate the mean and variance of its weights.
+        WHVI feed forward layer.
         Expects a D-dimensional input and produces a D-dimensional output.
+
+        :param D: number of input (and consequently output) dimensions.
+        :param activation: torch activation function (default: ReLU).
+        :param w_prior: prior distribution for the weights (default: diagonal multivariate standard normal).
+        :type w_prior: torch.distributions.distribution.Distribution.
         """
         super().__init__()
 
@@ -39,6 +43,11 @@ class BasicWHVILinear(nn.Module):
 
         self.q_mu = nn.Parameter(torch.randn(D))
         self.q_factor_lower = nn.Parameter(torch.tril(torch.randn(D, D)))  # This is probably not ideal for sampling
+
+        if w_prior is None:
+            self.w_prior = torch.distributions.Normal(0, 1)
+        else:
+            self.w_prior = w_prior
 
     @property
     def A(self):
