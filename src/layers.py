@@ -43,11 +43,14 @@ class BasicWHVILinear(nn.Module):
 
         self.q_mu = nn.Parameter(torch.randn(D))
         self.q_factor_lower = nn.Parameter(torch.tril(torch.randn(D, D)))  # This is probably not ideal for sampling
+        # TODO self.q_factor_lower seems wrong, because the paper says the complexity is linear in D
 
         if w_prior is None:
             self.w_prior = torch.distributions.Normal(0, 1)
         else:
             self.w_prior = w_prior
+        self.log_prior = 0.0
+        self.log_var_posterior = 0.0
 
     @property
     def A(self):
@@ -69,7 +72,12 @@ class BasicWHVILinear(nn.Module):
         g = q.sample()
         vect_W = self.A @ g
         W = torch.reshape(vect_W, (self.D, self.D))
-        return W
+        log_prior = self.w_prior.log_prob(W).sum()
+        log_var_posterior = q.log_prob(g).sum()  # TODO this seems wrong
+        return W, log_prior, log_var_posterior
 
     def forward(self, x):
-        return self.act(F.linear(x, self.sample_W(), bias=None))
+        W, log_prior, log_var_posterior = self.sample_W()
+        self.log_prior = log_prior
+        self.log_var_posterior = log_var_posterior
+        return self.act(F.linear(x, W, bias=None))
