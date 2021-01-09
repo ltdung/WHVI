@@ -21,16 +21,14 @@ def build_H_recursive(D):
     ], dim=0)
 
 
-class BasicWHVILinear(nn.Module):
-    def __init__(self, D, activation=F.relu, w_prior=None):
+class WHVILinear(nn.Module):
+    def __init__(self, D, activation=F.relu):
         """
         WHVI feed forward layer.
         Expects a D-dimensional input and produces a D-dimensional output.
 
         :param D: number of input (and consequently output) dimensions.
         :param activation: torch activation function (default: ReLU).
-        :param w_prior: prior distribution for the weights (default: diagonal multivariate standard normal).
-        :type w_prior: torch.distributions.distribution.Distribution.
         """
         super().__init__()
 
@@ -38,46 +36,42 @@ class BasicWHVILinear(nn.Module):
         self.H = build_H(D)
         self.act = activation
 
-        self.s1 = nn.Parameter(torch.rand(D))  # Diagonal elements of S1
-        self.s2 = nn.Parameter(torch.rand(D))  # Diagonal elements of S2
+        self.s1 = nn.Parameter(torch.randn(D))  # Diagonal elements of S1
+        self.s2 = nn.Parameter(torch.randn(D))  # Diagonal elements of S2
+        self.mu = nn.Parameter(torch.randn(D))
+        self.Rho = nn.Parameter(torch.randn((D, D)))  # Sigma_sqrt = softplus(Rho) @ softplus(Rho).T
 
-        self.q_mu = nn.Parameter(torch.randn(D))
-        self.q_factor_lower = nn.Parameter(torch.tril(torch.randn(D, D)))  # This is probably not ideal for sampling
-        # TODO self.q_factor_lower seems wrong, because the paper says the complexity is linear in D
+    def w_bar(self, u):
+        return torch.diag(self.s1) @ self.H @ torch.diag(u) @ self.H @ torch.diag(self.s2)  # TODO use FWHT
 
-        if w_prior is None:
-            self.w_prior = torch.distributions.Normal(0, 1)
-        else:
-            self.w_prior = w_prior
-        self.log_prior = 0.0
-        self.log_var_posterior = 0.0
-
-    @property
-    def A(self):
-        S1H = torch.diag(self.s1) @ self.H
-        # TODO use FWHT to compute this faster
-        HS2 = self.H @ torch.diag(self.s2)
-        A = torch.cat([S1H @ torch.diag(HS2[:, i]) for i in range(self.D)], 1).T
-        return A
-
-    @property
-    def q_Sigma(self):
-        q_factor = self.q_factor_lower + self.q_factor_lower.T
-        for i in range(self.D):
-            q_factor[i, i] = self.q_factor_lower[i, i]
-        return q_factor @ q_factor.T
-
-    def sample_W(self):
-        q = torch.distributions.MultivariateNormal(self.q_mu, self.q_Sigma)  # Variational posterior
-        g = q.sample()
-        vect_W = self.A @ g
-        W = torch.reshape(vect_W, (self.D, self.D))
-        log_prior = self.w_prior.log_prob(W).sum()
-        log_var_posterior = q.log_prob(g).sum()  # TODO this seems wrong
-        return W, log_prior, log_var_posterior
+    def sample_b(self, h):
+        # Sample W * h according to the local re-parametrization trick.
+        sigma_sqrt_factor = F.softplus(self.Rho)  # Make all elements non-negative
+        sigma_sqrt = sigma_sqrt_factor @ sigma_sqrt_factor.T  # Make the matrix positive-definite
+        epsilon = torch.randn(self.D)  # Sample independent Gaussian noise.
+        return self.w_bar(self.mu) @ h + self.w_bar(sigma_sqrt @ epsilon) @ h
 
     def forward(self, x):
-        W, log_prior, log_var_posterior = self.sample_W()
-        self.log_prior = log_prior
-        self.log_var_posterior = log_var_posterior
-        return self.act(F.linear(x, W, bias=None))
+        b = self.sample_b(x.T)
+        return self.act(b)
+
+
+if __name__ == '__main__':
+    torch.manual_seed(0)
+    layer = WHVILinear(2)
+    inputs = torch.tensor(data=[
+        [1., 0.],
+        [0., 1.],
+        [0., 2.],
+        [0., 3.],
+        [4., 0.],
+    ])
+    targets = torch.tensor(data=[
+        [5., 0.],
+        [0., 5.],
+        [0., 10.],
+        [0., 15.],
+        [20., 0.],
+    ])
+    outputs = layer(inputs)
+    print(outputs)
