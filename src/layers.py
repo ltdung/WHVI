@@ -1,3 +1,5 @@
+import math
+
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -21,57 +23,53 @@ def build_H_recursive(D):
     ], dim=0)
 
 
+def mvn_log_prob(x, mu, Sigma):
+    k = len(x)
+    return - 0.5 * math.log((2 * math.pi) ** k) \
+           - 0.5 * torch.log(torch.det(Sigma)) \
+           - 0.5 * (x - mu).T @ torch.solve(torch.reshape(x - mu, (-1, 1)), Sigma)[0]
+
+
 class WHVILinear(nn.Module):
-    def __init__(self, D, activation=F.relu):
+    def __init__(self, D):
         """
         WHVI feed forward layer.
         Expects a D-dimensional input and produces a D-dimensional output.
 
         :param D: number of input (and consequently output) dimensions.
-        :param activation: torch activation function (default: ReLU).
         """
         super().__init__()
 
         self.D = D
-        self.H = build_H(D)
-        self.act = activation
+        self.H = build_H(D)  # TODO This is probably not explicitly built, but uses FWHT instead
 
         self.s1 = nn.Parameter(torch.randn(D))  # Diagonal elements of S1
         self.s2 = nn.Parameter(torch.randn(D))  # Diagonal elements of S2
-        self.mu = nn.Parameter(torch.randn(D))
-        self.Rho = nn.Parameter(torch.randn((D, D)))  # Sigma_sqrt = softplus(Rho) @ softplus(Rho).T
+        self.g_mu = nn.Parameter(torch.randn(D))
+        self.g_rho = nn.Parameter(torch.randn(D))  # g_sigma = softplus(g_rho)
+        # g_sigma is diagonal, so g_sigma^0.5 means taking sqrt of diagonal elements
+
+        self.kl = 0.0
+
+    @property
+    def g_sigma(self):
+        return torch.diag(F.softplus(self.g_rho))
 
     def w_bar(self, u):
         return torch.diag(self.s1) @ self.H @ torch.diag(u) @ self.H @ torch.diag(self.s2)  # TODO use FWHT
 
     def sample_b(self, h):
-        # Sample W * h according to the local re-parametrization trick.
-        sigma_sqrt_factor = F.softplus(self.Rho)  # Make all elements non-negative
-        sigma_sqrt = sigma_sqrt_factor @ sigma_sqrt_factor.T  # Make the matrix positive-definite
-        epsilon = torch.randn(self.D)  # Sample independent Gaussian noise.
-        return self.w_bar(self.mu) @ h + self.w_bar(sigma_sqrt @ epsilon) @ h
+        # Sample W * h according to the local re-parametrization trick
+        epsilon = torch.randn(self.D)  # Sample independent Gaussian noise
+        return h @ self.w_bar(self.g_mu).T + h @ (self.w_bar(torch.sqrt(self.g_sigma) @ epsilon)).T
 
-    def forward(self, x):
-        b = self.sample_b(x.T)
-        return self.act(b)
-
-
-if __name__ == '__main__':
-    torch.manual_seed(0)
-    layer = WHVILinear(2)
-    inputs = torch.tensor(data=[
-        [1., 0.],
-        [0., 1.],
-        [0., 2.],
-        [0., 3.],
-        [4., 0.],
-    ])
-    targets = torch.tensor(data=[
-        [5., 0.],
-        [0., 5.],
-        [0., 10.],
-        [0., 15.],
-        [20., 0.],
-    ])
-    outputs = layer(inputs)
-    print(outputs)
+    def forward(self, x, sample=True):
+        S1H = torch.diag(self.s1) @ self.H
+        V = self.H @ torch.diag(self.s2)
+        A = torch.cat([(S1H @ torch.diag(V[:, i])).T for i in range(self.D)]).T
+        if sample:
+            b = self.sample_b(x)
+        else:
+            W = A @ self.g_mu
+            b = F.linear(x, W)
+        return b
