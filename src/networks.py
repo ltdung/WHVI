@@ -63,7 +63,7 @@ if __name__ == '__main__':
 
     optimizer = optim.Adam(net.parameters())
     loss_history = []
-    for epoch in range(100):
+    for epoch in range(500):
         loss = net.loss(inputs, targets)
         loss_history.append(float(loss))
         loss.backward()
