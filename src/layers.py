@@ -1,8 +1,8 @@
-import math
-
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+
+from walsh import fwht
 
 
 def build_H(D, scale=True):
@@ -21,13 +21,6 @@ def build_H_recursive(D):
         torch.cat([half_H, half_H], dim=1),
         torch.cat([half_H, -half_H], dim=1)
     ], dim=0)
-
-
-def mvn_log_prob(x, mu, Sigma):
-    k = len(x)
-    return - 0.5 * math.log((2 * math.pi) ** k) \
-           - 0.5 * torch.log(torch.det(Sigma)) \
-           - 0.5 * (x - mu).T @ torch.solve(torch.reshape(x - mu, (-1, 1)), Sigma)[0]
 
 
 class WHVILinear(nn.Module):
@@ -58,6 +51,7 @@ class WHVILinear(nn.Module):
         return torch.diag(torch.square(F.softplus(self.g_rho)))
 
     def w_bar(self, u):
+        # Is it possible that we can perform FWHT faster if the input matrix is diagonal?
         return torch.diag(self.s1) @ self.H @ torch.diag(u) @ self.H @ torch.diag(self.s2)  # TODO use FWHT
 
     @property
