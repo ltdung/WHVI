@@ -49,31 +49,32 @@ class WHVILinear(nn.Module):
         self.g_rho = nn.Parameter(torch.randn(D))  # g_sigma_sqrt = softplus(g_rho)
         # g_sigma is diagonal, so g_sigma^0.5 means taking sqrt of diagonal elements
 
-        self.kl = 0.0
-
     @property
     def g_sigma_sqrt(self):
         return torch.diag(F.softplus(self.g_rho))
 
     @property
     def g_sigma(self):
-        return torch.diag(torch.sqrt(F.softplus(self.g_rho)))
+        return torch.diag(torch.square(F.softplus(self.g_rho)))
 
     def w_bar(self, u):
         return torch.diag(self.s1) @ self.H @ torch.diag(u) @ self.H @ torch.diag(self.s2)  # TODO use FWHT
 
-    def sample_b(self, h):
-        # Sample W * h according to the local re-parametrization trick
-        epsilon = torch.randn(self.D)  # Sample independent Gaussian noise
-        return h @ self.w_bar(self.g_mu).T + h @ (self.w_bar(self.g_sigma_sqrt @ epsilon)).T
+    @property
+    def kl(self):
+        g_var_post = torch.distributions.Normal(self.g_mu, torch.square(F.softplus(self.g_rho)))
+        g_prior = torch.distributions.Normal(0, 1)
+        kl = torch.distributions.kl.kl_divergence(g_var_post, g_prior).sum()
+        return kl
 
     def forward(self, x, sample=True):
         S1H = torch.diag(self.s1) @ self.H
         V = self.H @ torch.diag(self.s2)
         A = torch.cat([(S1H @ torch.diag(V[:, i])).T for i in range(self.D)]).T
         if sample:
-            b = self.sample_b(x)
-            # Compute KL divergence
+            epsilon = torch.randn(self.D)  # Sample independent Gaussian noise
+            # Sample W * h according to the local re-parametrization trick
+            b = x @ self.w_bar(self.g_mu).T + x @ (self.w_bar(self.g_sigma_sqrt @ epsilon)).T
         else:
             W = A @ torch.diag(self.g_mu)
             b = F.linear(x, W)

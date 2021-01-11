@@ -37,7 +37,7 @@ class WHVIRegression(nn.Module):
         for i in range(n_samples):
             y_hat = self(X)
             nll = self.loss_function(y_hat, y)
-            kl = self.l2.kl  # Take KL terms of all WHVI layers
+            kl = self.l2.kl  # Take KL terms of all WHVI layers and sum them
             nll_samples[i] = nll
             kl_samples[i] = kl
 
@@ -63,7 +63,7 @@ if __name__ == '__main__':
 
     optimizer = optim.Adam(net.parameters())
     loss_history = []
-    for epoch in range(500):
+    for epoch in range(1500):
         loss = net.loss(inputs, targets)
         loss_history.append(float(loss))
         loss.backward()
