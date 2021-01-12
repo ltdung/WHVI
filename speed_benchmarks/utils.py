@@ -1,4 +1,4 @@
-from benchmark.classes import Benchmark, st_time
+from speed_benchmarks.classes import Benchmark, st_time
 from src.utils import matmul_diag_left, matmul_diag_right
 import torch
 

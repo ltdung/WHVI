@@ -1,4 +1,4 @@
-from benchmark.classes import Benchmark, st_time
+from speed_benchmarks.classes import Benchmark, st_time
 import torch
 from src.walsh import build_H, fwht, FWHT, FWHT_diag
 

@@ -67,7 +67,7 @@ if __name__ == '__main__':
     import time
 
     for epoch in range(1500):
-        print(f'Epoch {epoch+1}')
+        print(f'Epoch {epoch + 1}')
         t0 = time.time()
         loss = net.loss(inputs, targets)
         loss_history.append(float(loss))

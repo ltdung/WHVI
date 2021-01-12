@@ -40,26 +40,25 @@ class WHVILinear(nn.Module):
 
         self.D = D
 
+        # self.s1 = torch.randn(D)  # Diagonal elements of S1
         self.s1 = nn.Parameter(torch.randn(D))  # Diagonal elements of S1
+        # self.s2 = torch.randn(D)  # Diagonal elements of S2
         self.s2 = nn.Parameter(torch.randn(D))  # Diagonal elements of S2
         self.g_mu = nn.Parameter(torch.randn(D))
-        self.g_rho = nn.Parameter(torch.randn(D))  # g_sigma_sqrt = softplus(g_rho)
+        self.g_rho = nn.Parameter(torch.distributions.Uniform(-4, -5).sample((D,)))  # g_sigma_sqrt = softplus(g_rho)
 
     @property
     def g_sigma_sqrt_diagonal(self):
         return F.softplus(self.g_rho)
 
-    @property
-    def g_sigma_sqrt(self):
-        return torch.diag(self.g_sigma_sqrt_diagonal)
-
     def w_bar(self, u):
+        assert u.size() == (self.D,)
         # Is it possible that we can perform FWHT even faster if the input matrix is diagonal?
         return matmul_diag_left(self.s1, FWHT.apply(matmul_diag_left(u, FWHT_diag.apply(self.s2))))
 
     @property
     def kl(self):
-        g_var_post = torch.distributions.Normal(self.g_mu, torch.square(self.g_sigma_sqrt_diagonal))
+        g_var_post = torch.distributions.Normal(self.g_mu, self.g_sigma_sqrt_diagonal)
         g_prior = torch.distributions.Normal(0, 1)
         kl = torch.distributions.kl.kl_divergence(g_var_post, g_prior).sum()
         return kl
