@@ -59,7 +59,7 @@ class WHVILinear(nn.Module):
 
     @property
     def kl(self):
-        g_var_post = torch.distributions.Normal(self.g_mu, torch.square(F.softplus(self.g_rho)))
+        g_var_post = torch.distributions.Normal(self.g_mu, torch.square(self.g_sigma_sqrt_diagonal))
         g_prior = torch.distributions.Normal(0, 1)
         kl = torch.distributions.kl.kl_divergence(g_var_post, g_prior).sum()
         return kl
