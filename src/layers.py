@@ -10,23 +10,6 @@ from utils import matmul_diag_left, matmul_diag_right
 # TODO time complexity must be O(DlogD), check FASTFOOD.
 # TODO Hx must be computed in O(DlogD) time and O(1) space using the in-place version of FWHT.
 
-def build_H(D, scale=True):
-    assert (D & (D >> 1)) == 0 and D > 0, "Error: D must be a power of two."
-    H = build_H_recursive(D)
-    if scale:
-        H = (D ** (-1 / 2)) * H  # Make H orthonormal
-    return H
-
-
-def build_H_recursive(D):
-    if D == 2:
-        return torch.tensor(data=[[1., 1.], [1., -1.]])
-    half_H = build_H_recursive(D // 2)  # Division by 2
-    return torch.cat([
-        torch.cat([half_H, half_H], dim=1),
-        torch.cat([half_H, -half_H], dim=1)
-    ], dim=0)
-
 
 class WHVILinear(nn.Module):
     def __init__(self, D):
