@@ -62,7 +62,7 @@ class WHVILinear(nn.Module):
         kl = torch.distributions.kl.kl_divergence(g_var_post, g_prior).sum()
         return kl
 
-    def forward(self, x, sample=True, use_FWHT=True):
+    def forward(self, x, sample=True):
         S1H = FWHT.apply(torch.diag(self.s1)).T
         V = FWHT.apply(torch.diag(self.s2))
         A = torch.cat([(S1H @ torch.diag(V[:, i])).T for i in range(self.D)]).T

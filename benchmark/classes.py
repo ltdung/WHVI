@@ -1,4 +1,4 @@
-from time import process_time
+import time
 
 
 def st_time(func):
@@ -16,9 +16,9 @@ def st_time(func):
     """
 
     def st_func(*args, **kwargs):
-        t1 = process_time()
+        t1 = time.time()
         r = func(*args, **kwargs)
-        t2 = process_time()
+        t2 = time.time()
         print(f"\t{func.__name__}: {(t2 - t1):.3f} s", flush=True)
         return r
 

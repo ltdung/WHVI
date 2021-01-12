@@ -5,6 +5,7 @@ import torch.optim as optim
 
 from layers import WHVILinear
 
+
 class WHVIRegression(nn.Module):
     def __init__(self, n_in, n_out, D, loss_function=F.mse_loss):
         """
@@ -57,7 +58,7 @@ if __name__ == '__main__':
     ])
     targets = torch.reshape((inputs ** 3 - torch.exp(inputs * 2)).sum(dim=1), (-1, 1))  # A toy function
 
-    net = WHVIRegression(n_in=2, n_out=1, D=2 ** 5, loss_function=F.mse_loss)
+    net = WHVIRegression(n_in=2, n_out=1, D=2 ** 7, loss_function=F.mse_loss)
     net.train()
 
     optimizer = optim.Adam(net.parameters())
@@ -65,14 +66,15 @@ if __name__ == '__main__':
     epoch_time = []
     import time
 
-    for epoch in range(150):
-        t0 = time.process_time()
+    for epoch in range(100):
+        print(f'Epoch {epoch+1}')
+        t0 = time.time()
         loss = net.loss(inputs, targets)
         loss_history.append(float(loss))
         loss.backward()
         optimizer.step()
         net.zero_grad()
-        epoch_time.append(time.process_time()-t0)
+        epoch_time.append(time.time() - t0)
 
     import matplotlib.pyplot as plt
 
@@ -87,4 +89,6 @@ if __name__ == '__main__':
     plt.show()
 
     import numpy as np
-    print(np.median(epoch_time))
+
+    print(f'Median epoch time: {np.median(epoch_time)}')
+    print(f'Mean epoch time: {np.mean(epoch_time)}')

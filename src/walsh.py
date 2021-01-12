@@ -36,7 +36,8 @@ class FWHT(torch.autograd.Function):
         Much faster, not in-place.
         """
         n = len(tensor)
-        result = np.copy(tensor.detach().numpy())  # transform to numpy
+        # result = np.copy(tensor.detach().numpy())  # transform to numpy
+        result = tensor.detach().numpy()  # transform to numpy
 
         h = 1
         while h < n:
