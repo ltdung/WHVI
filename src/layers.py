@@ -1,8 +1,9 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+import time
 
-from walsh import fwht
+from walsh import fwht, FWHT
 
 
 def build_H(D, scale=True):
@@ -34,7 +35,6 @@ class WHVILinear(nn.Module):
         super().__init__()
 
         self.D = D
-        self.H = build_H(D)  # TODO This is probably not explicitly built, but uses FWHT instead
 
         self.s1 = nn.Parameter(torch.randn(D))  # Diagonal elements of S1
         self.s2 = nn.Parameter(torch.randn(D))  # Diagonal elements of S2
@@ -52,12 +52,10 @@ class WHVILinear(nn.Module):
 
     def w_bar(self, u):
         # Is it possible that we can perform FWHT faster if the input matrix is diagonal?
-        diag_u = torch.diag(torch.clone(u))
-        diag_s1 = torch.diag(torch.clone(self.s1))
-        diag_s2 = torch.diag(torch.clone(self.s2))
-
-        return diag_s1 @ fwht(diag_u @ fwht(diag_s2))
-        # return torch.diag(self.s1) @ self.H @ torch.diag(u) @ self.H @ torch.diag(self.s2)  # TODO use FWHT
+        diag_u = torch.diag(u)
+        diag_s1 = torch.diag(self.s1)
+        diag_s2 = torch.diag(self.s2)
+        return diag_s1 @ FWHT.apply(diag_u @ FWHT.apply(diag_s2))
 
     @property
     def kl(self):
@@ -66,9 +64,9 @@ class WHVILinear(nn.Module):
         kl = torch.distributions.kl.kl_divergence(g_var_post, g_prior).sum()
         return kl
 
-    def forward(self, x, sample=True):
-        S1H = torch.diag(self.s1) @ self.H
-        V = self.H @ torch.diag(self.s2)
+    def forward(self, x, sample=True, use_FWHT=True):
+        S1H = FWHT.apply(torch.diag(self.s1)).T
+        V = FWHT.apply(torch.diag(self.s2))
         A = torch.cat([(S1H @ torch.diag(V[:, i])).T for i in range(self.D)]).T
         if sample:
             epsilon = torch.randn(self.D)  # Sample independent Gaussian noise
