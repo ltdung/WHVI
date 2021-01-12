@@ -42,6 +42,5 @@ class WalshBenchmark(Benchmark):
 
 
 if __name__ == '__main__':
-    print('')
     wb = WalshBenchmark()
     wb.main()

@@ -1,9 +1,9 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-import time
 
-from walsh import fwht, FWHT
+from walsh import FWHT
+from utils import matmul_diag_left
 
 
 def build_H(D, scale=True):
@@ -52,10 +52,8 @@ class WHVILinear(nn.Module):
 
     def w_bar(self, u):
         # Is it possible that we can perform FWHT faster if the input matrix is diagonal?
-        diag_u = torch.diag(u)
-        diag_s1 = torch.diag(self.s1)
         diag_s2 = torch.diag(self.s2)
-        return diag_s1 @ FWHT.apply(diag_u @ FWHT.apply(diag_s2))
+        return matmul_diag_left(self.s1, FWHT.apply(matmul_diag_left(u, FWHT.apply(diag_s2))))
 
     @property
     def kl(self):
