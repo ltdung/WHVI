@@ -52,7 +52,12 @@ class WHVILinear(nn.Module):
 
     def w_bar(self, u):
         # Is it possible that we can perform FWHT faster if the input matrix is diagonal?
-        return torch.diag(self.s1) @ self.H @ torch.diag(u) @ self.H @ torch.diag(self.s2)  # TODO use FWHT
+        diag_u = torch.diag(torch.clone(u))
+        diag_s1 = torch.diag(torch.clone(self.s1))
+        diag_s2 = torch.diag(torch.clone(self.s2))
+
+        return diag_s1 @ fwht(diag_u @ fwht(diag_s2))
+        # return torch.diag(self.s1) @ self.H @ torch.diag(u) @ self.H @ torch.diag(self.s2)  # TODO use FWHT
 
     @property
     def kl(self):

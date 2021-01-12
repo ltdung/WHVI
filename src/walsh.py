@@ -20,6 +20,7 @@ def fwht(A: torch.Tensor):
             for j in range(i, i + h):
                 A[j, :], A[j + h, :] = A[j, :] + A[j + h, :], A[j, :] - A[j + h, :]
         h *= 2
+    return A
 
 
 def build_H(D):
