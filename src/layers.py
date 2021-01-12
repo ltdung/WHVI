@@ -46,11 +46,15 @@ class WHVILinear(nn.Module):
         self.g_rho = nn.Parameter(torch.randn(D))  # g_sigma_sqrt = softplus(g_rho)
 
     @property
+    def g_sigma_sqrt_diagonal(self):
+        return F.softplus(self.g_rho)
+
+    @property
     def g_sigma_sqrt(self):
-        return torch.diag(F.softplus(self.g_rho))
+        return torch.diag(self.g_sigma_sqrt_diagonal)
 
     def w_bar(self, u):
-        # Is it possible that we can perform FWHT faster if the input matrix is diagonal?
+        # Is it possible that we can perform FWHT even faster if the input matrix is diagonal?
         return matmul_diag_left(self.s1, FWHT.apply(matmul_diag_left(u, FWHT_diag.apply(self.s2))))
 
     @property
@@ -66,8 +70,9 @@ class WHVILinear(nn.Module):
         A = torch.cat([(matmul_diag_right(S1H, V[:, i])).T for i in range(self.D)]).T
         if sample:
             epsilon = torch.randn(self.D)  # Sample independent Gaussian noise
-            # Sample W * h according to the local re-parametrization trick
-            b = x @ self.w_bar(self.g_mu).T + x @ (self.w_bar(self.g_sigma_sqrt @ epsilon)).T
+            # Sample W * h according to the local re-parametrization trick. It's also faster to just multiply the
+            # diagonal elements with the vector elements than to construct the whole diagonal matrix.
+            b = x @ self.w_bar(self.g_mu).T + x @ (self.w_bar(self.g_sigma_sqrt_diagonal * epsilon)).T
         else:
             W = matmul_diag_right(A, self.g_mu)
             b = F.linear(x, W)

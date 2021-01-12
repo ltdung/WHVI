@@ -66,7 +66,7 @@ if __name__ == '__main__':
     epoch_time = []
     import time
 
-    for epoch in range(100):
+    for epoch in range(1500):
         print(f'Epoch {epoch+1}')
         t0 = time.time()
         loss = net.loss(inputs, targets)
@@ -90,5 +90,6 @@ if __name__ == '__main__':
 
     import numpy as np
 
-    print(f'Median epoch time: {np.median(epoch_time)}')
-    print(f'Mean epoch time: {np.mean(epoch_time)}')
+    print(f'Median epoch time: {np.median(epoch_time)} s')
+    print(f'Mean epoch time: {np.mean(epoch_time)} s')
+    print(f'Total time: {np.sum(epoch_time)} s')
