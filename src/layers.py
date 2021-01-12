@@ -40,9 +40,7 @@ class WHVILinear(nn.Module):
 
         self.D = D
 
-        # self.s1 = torch.randn(D)  # Diagonal elements of S1
         self.s1 = nn.Parameter(torch.randn(D))  # Diagonal elements of S1
-        # self.s2 = torch.randn(D)  # Diagonal elements of S2
         self.s2 = nn.Parameter(torch.randn(D))  # Diagonal elements of S2
         self.g_mu = nn.Parameter(torch.randn(D))
         self.g_rho = nn.Parameter(torch.distributions.Uniform(-4, -5).sample((D,)))  # g_sigma_sqrt = softplus(g_rho)
