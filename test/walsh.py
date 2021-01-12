@@ -1,6 +1,6 @@
 import unittest
 import torch
-from src.walsh import build_H, FWHT
+from src.walsh import build_H, FWHT, FWHT_diag
 
 
 class WalshHadamard(unittest.TestCase):
@@ -32,6 +32,13 @@ class WalshHadamard(unittest.TestCase):
             reference = H @ A
             A = FWHT.apply(A)
             self.assertTrue(torch.allclose(A, reference, atol=1e-5))
+
+    def test_FWHT_diag(self):
+        D = 2 ** 5
+        H = build_H(D)
+        for _ in range(30):
+            elements = torch.randn(D)
+            self.assertTrue(torch.allclose(H @ torch.diag(elements), FWHT_diag.apply(elements)))
 
 
 if __name__ == '__main__':

@@ -2,8 +2,8 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from walsh import FWHT
-from utils import matmul_diag_left
+from walsh import FWHT, FWHT_diag
+from utils import matmul_diag_left, matmul_diag_right
 
 
 # TODO space complexity must be O(D), check FASTFOOD.
@@ -44,20 +44,14 @@ class WHVILinear(nn.Module):
         self.s2 = nn.Parameter(torch.randn(D))  # Diagonal elements of S2
         self.g_mu = nn.Parameter(torch.randn(D))
         self.g_rho = nn.Parameter(torch.randn(D))  # g_sigma_sqrt = softplus(g_rho)
-        # g_sigma is diagonal, so g_sigma^0.5 means taking sqrt of diagonal elements
 
     @property
     def g_sigma_sqrt(self):
         return torch.diag(F.softplus(self.g_rho))
 
-    @property
-    def g_sigma(self):
-        return torch.diag(torch.square(F.softplus(self.g_rho)))
-
     def w_bar(self, u):
         # Is it possible that we can perform FWHT faster if the input matrix is diagonal?
-        diag_s2 = torch.diag(self.s2)
-        return matmul_diag_left(self.s1, FWHT.apply(matmul_diag_left(u, FWHT.apply(diag_s2))))
+        return matmul_diag_left(self.s1, FWHT.apply(matmul_diag_left(u, FWHT_diag.apply(self.s2))))
 
     @property
     def kl(self):
@@ -67,14 +61,14 @@ class WHVILinear(nn.Module):
         return kl
 
     def forward(self, x, sample=True):
-        S1H = FWHT.apply(torch.diag(self.s1)).T
-        V = FWHT.apply(torch.diag(self.s2))
-        A = torch.cat([(S1H @ torch.diag(V[:, i])).T for i in range(self.D)]).T
+        S1H = FWHT_diag.apply(self.s1).T
+        V = FWHT_diag.apply(self.s2)
+        A = torch.cat([(matmul_diag_right(S1H, V[:, i])).T for i in range(self.D)]).T
         if sample:
             epsilon = torch.randn(self.D)  # Sample independent Gaussian noise
             # Sample W * h according to the local re-parametrization trick
             b = x @ self.w_bar(self.g_mu).T + x @ (self.w_bar(self.g_sigma_sqrt @ epsilon)).T
         else:
-            W = A @ torch.diag(self.g_mu)
+            W = matmul_diag_right(A, self.g_mu)
             b = F.linear(x, W)
         return b
