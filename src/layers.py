@@ -6,6 +6,10 @@ from walsh import FWHT
 from utils import matmul_diag_left
 
 
+# TODO space complexity must be O(D), check FASTFOOD.
+# TODO time complexity must be O(DlogD), check FASTFOOD.
+# TODO Hx must be computed in O(DlogD) time and O(1) space using the in-place version of FWHT.
+
 def build_H(D, scale=True):
     assert (D & (D >> 1)) == 0 and D > 0, "Error: D must be a power of two."
     H = build_H_recursive(D)
