@@ -72,7 +72,7 @@ class WHVILinear(nn.Module):
             epsilon = torch.randn(self.D)  # Sample independent Gaussian noise
             # Sample W * h according to the local re-parametrization trick. It's also faster to just multiply the
             # diagonal elements with the vector elements than to construct the whole diagonal matrix.
-            b = x @ self.w_bar(self.g_mu).T + x @ (self.w_bar(self.g_sigma_sqrt_diagonal * epsilon)).T
+            b = x @ (self.w_bar(self.g_mu) + self.w_bar(self.g_sigma_sqrt_diagonal * epsilon)).T
         else:
             W = matmul_diag_right(A, self.g_mu)
             b = F.linear(x, W)
