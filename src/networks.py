@@ -1,15 +1,15 @@
-from typing import Any
+from typing import Any, Iterable
 
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
 
-from layers import WHVILinear
+from layers import WHVILinear, WHVI
 
 
 class WHVINetwork(nn.Sequential):
-    def __init__(self, *args: Any, train_samples=1, eval_samples=64):
+    def __init__(self, modules: Iterable[nn.Module], loss_function=F.mse_loss, train_samples=1, eval_samples=64):
         """
         Sequential neural network which supports WHVI layers.
         The output should be a vector.
@@ -20,13 +20,14 @@ class WHVINetwork(nn.Sequential):
 
 
         Example:
-        >>> layers = [nn.Linear(28 * 28, 128), WHVILinear(128), nn.Linear(128, 10)]
-        >>> net = WHVINetwork(*layers)
+        >>> modules = [nn.Linear(28 * 28, 128), nn.ReLU(), WHVILinear(128), nn.ReLU(), nn.Linear(128, 10)]
+        >>> net = WHVINetwork(modules)
         >>> net(torch.randn(100, 64))
         """
-        super().__init__(*args)
+        super().__init__(*modules)
         self.train_samples = train_samples
         self.eval_samples = eval_samples
+        self.loss_function = loss_function
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         """
@@ -54,10 +55,10 @@ class WHVINetwork(nn.Sequential):
 
         :param torch.Tensor x: network input of shape (batch_size, in_dim).
         :param torch.Tensor y: network target of shape (batch_size, out_dim).
-        :return torch.Tensor: ELBO.
+        :return torch.Tensor: ELBO value.
         """
         n_samples = self.train_samples if self.training else self.eval_samples
-        kl = sum([layer.kl for layer in self.modules() if type(layer) == WHVILinear])
+        kl = sum([layer.kl for layer in self.modules() if isinstance(layer, WHVI)])
         nll_samples = torch.zeros(n_samples)
         for i in range(n_samples):
             predictions = self(x)

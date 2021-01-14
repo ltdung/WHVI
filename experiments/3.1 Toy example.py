@@ -1,3 +1,5 @@
+from typing import Any
+
 import torch
 import numpy as np
 import matplotlib.pyplot as plt
@@ -5,6 +7,8 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
 
+from activations import Cosine
+from networks import WHVINetwork
 from layers import WHVILinear
 
 torch.manual_seed(0)  # Seed for reproducibility
@@ -42,63 +46,28 @@ plt.xlim(-2, 3)
 plt.legend()
 plt.show()
 
-
-class ToyNetwork(nn.Module):
-    def __init__(self, n_in=1, n_out=1, D=128, loss_function=F.mse_loss):
-        """
-        Regression feed-forward neural network with a single WHVI layer.
-
-        :param n_in: input dimensionality.
-        :param n_out: output dimensionality.
-        :param D: number of WHVI weight matrix rows/columns.
-        """
-        super().__init__()
-        assert (D & (D >> 1)) == 0 and D > 0
-        self.loss_function = loss_function
-
-        self.l1 = nn.Linear(n_in, D)
-        self.l2 = WHVILinear(D)
-        self.l3 = WHVILinear(D)
-        self.l4 = nn.Linear(D, n_out)
-
-    def forward(self, x):
-        x = torch.cos(self.l1(x))
-        x = torch.cos(self.l2(x))
-        x = torch.cos(self.l3(x))
-        x = self.l4(x)
-        return x
-
-    def loss(self, X, y, n_samples=10):
-        assert n_samples > 0
-
-        nll_samples = torch.zeros(n_samples)
-        for i in range(n_samples):
-            y_hat = self(X)
-            nll = self.loss_function(y_hat, y)
-            nll_samples[i] = nll
-
-        mean_nll = nll_samples.mean()
-        kl = self.l2.kl + self.l3.kl  # Take KL terms of all WHVI layers and sum them
-        print(f'NLL: {float(mean_nll):.2f}, KL: {float(kl):.2f}', end=', ')
-        return mean_nll + kl
-
-
 train_x = torch.reshape(x, (-1, 1))
 train_y = torch.reshape(y, (-1, 1))
-net = ToyNetwork()
+net = WHVINetwork([
+    nn.Linear(1, 128),
+    Cosine(),
+    WHVILinear(128),
+    Cosine(),
+    WHVILinear(128),
+    Cosine(),
+    nn.Linear(128, 1)],
+    loss_function=F.mse_loss
+)
 net.train()
 optimizer = optim.Adam(net.parameters(), lr=0.15)  # Optimizer not given in paper
-for epoch in range(200):  # Number of epochs not given in paper
-    loss = net.loss(train_x, train_y, n_samples=10)  # Number of samples not given in paper
+for epoch in range(5000):  # Number of epochs not given in paper
+    loss = net.loss(train_x, train_y)  # Number of samples not given in paper
     loss.backward()
-    # print(f'Epoch {epoch + 1}, loss = {float(loss):.3f}')
-    print(f'MVar2: {float(F.softplus(net.l2.g_rho).mean()):.3f}, MVar3: {float(F.softplus(net.l3.g_rho).mean()):.3f}')
-    # print(net.l2.s1[:5])
+    print(f'Epoch {epoch + 1}, loss = {float(loss):.3f}')
     optimizer.step()
     net.zero_grad()
 
 plt.figure()
-# plt.title('Data and function for experiment 3.1 (Toy example)')
 plt.ylim(-1, 2.5)
 plt.xlim(-2, 3)
 test_x = torch.reshape(torch.linspace(-2, 3, 1000), (-1, 1))

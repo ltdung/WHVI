@@ -10,8 +10,15 @@ from utils import matmul_diag_left, matmul_diag_right
 # TODO time complexity must be O(DlogD), check FASTFOOD.
 # TODO Hx must be computed in O(DlogD) time and O(1) space using the in-place version of FWHT.
 
+class WHVI:
+    def __init__(self):
+        """
+        Abstract class for WHVI layers.
+        """
+        self.kl = 0.0
 
-class WHVILinear(nn.Module):
+
+class WHVILinear(nn.Module, WHVI):
     def __init__(self, D):
         """
         WHVI feed forward layer.
