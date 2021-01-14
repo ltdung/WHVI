@@ -1,3 +1,4 @@
+import math
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -19,16 +20,18 @@ class WHVI:
 
 
 class WHVILinear(nn.Module, WHVI):
-    def __init__(self, D):
+    def __init__(self, D, lambda_=0.00001):
         """
         WHVI feed forward layer.
         Expects a D-dimensional input and produces a D-dimensional output.
 
         :param D: number of input (and consequently output) dimensions.
+        :param lambda_: prior variance.
         """
         super().__init__()
 
         self.D = D
+        self.lambda_ = lambda_
 
         self.s1 = nn.Parameter(torch.ones(D) * 0.01)  # Diagonal elements of S1
         self.s2 = nn.Parameter(torch.ones(D) * 0.01)  # Diagonal elements of S2
@@ -46,9 +49,16 @@ class WHVILinear(nn.Module, WHVI):
 
     @property
     def kl(self):
-        g_var_post = torch.distributions.Normal(self.g_mu, self.g_sigma_sqrt_diagonal)
-        g_prior = torch.distributions.Normal(0, 10 ** (-5))
-        kl = torch.distributions.kl.kl_divergence(g_var_post, g_prior).sum()
+        # KL divergence from the posterior to the prior, but the prior has zero mean and fully factorized covariance
+        # lambda_ * Identity.
+        g_sigma_diagonal = self.g_sigma_sqrt_diagonal ** 2
+        kl = 0.5 * (
+                self.D * math.log(self.lambda_)
+                - torch.sum(torch.log(g_sigma_diagonal))
+                - self.D
+                + torch.sum(g_sigma_diagonal / self.lambda_)
+                + torch.dot(self.g_mu, self.g_mu) / self.lambda_
+        )
         return kl
 
     def forward(self, x, sample=True):
