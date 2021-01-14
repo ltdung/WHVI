@@ -60,9 +60,9 @@ class WHVINetwork(nn.Sequential):
         n_samples = self.train_samples if self.training else self.eval_samples
         kl = sum([layer.kl for layer in self.modules() if isinstance(layer, WHVI)])
         nll_samples = torch.zeros(n_samples)
+        predictions = self(x)  # Obtain n_samples of predictions
         for i in range(n_samples):
-            predictions = self(x)
-            nll_samples[i] = self.loss_function(predictions, y)
+            nll_samples[i] = self.loss_function(predictions[..., i], y)
         mean_nll = nll_samples.mean()
         return mean_nll + kl
 
