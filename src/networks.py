@@ -1,9 +1,69 @@
+from typing import Any
+
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
 
 from layers import WHVILinear
+
+
+class WHVINetwork(nn.Sequential):
+    def __init__(self, *args: Any, train_samples=1, eval_samples=64):
+        """
+        Sequential neural network which supports WHVI layers.
+        The output should be a vector.
+
+        :param args: valid sequence of network layers of type torch.nn.Module.
+        :param int train_samples: number of Monte Carlo samples to draw during training.
+        :param int eval_samples: number of Monte Carlo samples to draw during evaluation.
+
+
+        Example:
+        >>> layers = [nn.Linear(28 * 28, 128), WHVILinear(128), nn.Linear(128, 10)]
+        >>> net = WHVINetwork(*layers)
+        >>> net(torch.randn(100, 64))
+        """
+        super().__init__(*args)
+        self.train_samples = train_samples
+        self.eval_samples = eval_samples
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        """
+        Propagates input x through the network.
+
+        :param torch.Tensor x: network input of shape (batch_size, in_dim).
+        :return torch.Tensor: network output of shape (batch_size, out_dim, n_samples).
+        """
+        assert x.dim() == 2, "Input shape must be (batch_size, in_dim)"
+        batch_size = x.size()[0]
+        n_samples = self.train_samples if self.training else self.eval_samples
+
+        predictions = []
+        for _ in range(n_samples):
+            batch_predictions = super(WHVINetwork, self).forward(x)
+            predictions.append(torch.reshape(batch_predictions, (batch_size, batch_predictions.size()[-1], 1)))
+        predictions = torch.cat(predictions, dim=2)
+
+        assert predictions.dim() == 3
+        return predictions
+
+    def loss(self, x: torch.Tensor, y: torch.Tensor) -> torch.Tensor:
+        """
+        Compute ELBO given inputs x and target y.
+
+        :param torch.Tensor x: network input of shape (batch_size, in_dim).
+        :param torch.Tensor y: network target of shape (batch_size, out_dim).
+        :return torch.Tensor: ELBO.
+        """
+        n_samples = self.train_samples if self.training else self.eval_samples
+        kl = sum([layer.kl for layer in self.modules() if type(layer) == WHVILinear])
+        nll_samples = torch.zeros(n_samples)
+        for i in range(n_samples):
+            predictions = self(x)
+            nll_samples[i] = self.loss_function(predictions, y)
+        mean_nll = nll_samples.mean()
+        return mean_nll + kl
 
 
 class WHVIRegression(nn.Module):

@@ -23,10 +23,10 @@ class WHVILinear(nn.Module):
 
         self.D = D
 
-        self.s1 = nn.Parameter(torch.randn(D))  # Diagonal elements of S1
-        self.s2 = nn.Parameter(torch.randn(D))  # Diagonal elements of S2
-        self.g_mu = nn.Parameter(torch.randn(D))
-        self.g_rho = nn.Parameter(torch.distributions.Uniform(-4, -5).sample((D,)))  # g_sigma_sqrt = softplus(g_rho)
+        self.s1 = nn.Parameter(torch.ones(D) * 0.01)  # Diagonal elements of S1
+        self.s2 = nn.Parameter(torch.ones(D) * 0.01)  # Diagonal elements of S2
+        self.g_mu = nn.Parameter(torch.zeros(D))
+        self.g_rho = nn.Parameter(torch.distributions.Uniform(-5, -4).sample((D,)))  # g_sigma_sqrt = softplus(g_rho)
 
     @property
     def g_sigma_sqrt_diagonal(self):
@@ -40,7 +40,7 @@ class WHVILinear(nn.Module):
     @property
     def kl(self):
         g_var_post = torch.distributions.Normal(self.g_mu, self.g_sigma_sqrt_diagonal)
-        g_prior = torch.distributions.Normal(0, 1)
+        g_prior = torch.distributions.Normal(0, 10 ** (-5))
         kl = torch.distributions.kl.kl_divergence(g_var_post, g_prior).sum()
         return kl
 
