@@ -5,11 +5,10 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from walsh import build_H
+from walsh import build_H, FWHT
 from utils import matmul_diag_left
 
 
-# TODO move to CUDA
 # TODO space complexity must be O(D), check FASTFOOD.
 # TODO time complexity must be O(DlogD), check FASTFOOD.
 # TODO Hx must be computed in O(DlogD) time and O(1) space using the in-place version of FWHT.
@@ -23,7 +22,7 @@ class WHVI:
 
 
 class WHVILinear(nn.Module, WHVI):
-    def __init__(self, D, lambda_=0.00001, device=None):
+    def __init__(self, D, lambda_=0.00001):
         """
         WHVI feed forward layer.
         Expects a D-dimensional input and produces a D-dimensional output.
@@ -34,11 +33,9 @@ class WHVILinear(nn.Module, WHVI):
         super().__init__()
 
         self.D = D
-        self.H = build_H(D).to(device)
+        self.H = build_H(D)
         self.lambda_ = lambda_
-        self.epsilon_block = torch.randn(D * 10).to(device)
-
-        self.device = device
+        self.epsilon_block = torch.randn(D * 30)
 
         self.s1 = nn.Parameter(torch.ones(D) * 0.01)  # Diagonal elements of S1 - what is a good initialization? TODO
         self.s2 = nn.Parameter(torch.ones(D) * 0.01)  # Diagonal elements of S2 - what is a good initialization? TODO
@@ -49,25 +46,10 @@ class WHVILinear(nn.Module, WHVI):
     def g_sigma_sqrt_diagonal(self):
         return F.softplus(self.g_rho)
 
-    def FWHT(self, tensor):
-        n = len(tensor)
-        # result = np.copy(tensor.detach().numpy())  # transform to numpy
-        result = tensor.detach().cpu().numpy()  # transform to numpy
-
-        h = 1
-        while h < n:
-            for i in range(0, n, h * 2):
-                for j in range(i, i + h):
-                    result[j, :], result[j + h, :] = result[j, :] + result[j + h, :], result[j, :] - result[j + h, :]
-            h *= 2
-
-        result /= math.sqrt(n)  # Make H orthonormal
-        return torch.from_numpy(result).to(self.device)  # transform back to torch
-
     def w_bar(self, u):
         assert u.size() == (self.D,)
         # Is it possible that we can perform FWHT even faster if the input matrix is diagonal?
-        return matmul_diag_left(self.s1, self.FWHT(matmul_diag_left(u, self.H * self.s2)))
+        return matmul_diag_left(self.s1, FWHT.apply(matmul_diag_left(u, self.H * self.s2)))
 
     @property
     def kl(self):
@@ -84,7 +66,9 @@ class WHVILinear(nn.Module, WHVI):
         return kl
 
     def forward(self, x):
-        epsilon = self.epsilon_block[torch.tensor(random.sample(range(len(self.epsilon_block)), self.D))]  # Sample Gaussian noise with the gaussian block trick.
+        # Sample Gaussian noise with the gaussian block trick.
+        epsilon = self.epsilon_block[torch.tensor(random.sample(range(len(self.epsilon_block)), self.D))]
+
         # Sample W * h according to the local re-parametrization trick. It's also faster to just multiply the
         # diagonal elements with the vector elements than to construct the whole diagonal matrix.
         b = x @ (self.w_bar(self.g_mu) + self.w_bar(self.g_sigma_sqrt_diagonal * epsilon)).T

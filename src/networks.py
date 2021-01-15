@@ -78,7 +78,7 @@ class WHVIRegression(WHVINetwork):
         self.current_mnll = 0.0
 
     def mnll(self, y: torch.Tensor, y_hat: torch.Tensor, sigma: torch.Tensor):
-        sums_of_squares = torch.zeros((y_hat.size()[2],)).to(y.device)
+        sums_of_squares = torch.zeros((y_hat.size()[2],))
         for j in range(len(sums_of_squares)):
             sums_of_squares[j] = torch.sum(torch.square(y - y_hat[..., j]))
         return -torch.mean(len(y) * (self.log_rsqrt_2pi - torch.log(sigma)) - 1 / (2 * sigma ** 2) * sums_of_squares)
@@ -92,7 +92,6 @@ class WHVIRegression(WHVINetwork):
         :param torch.Tensor y: network target of shape (batch_size, out_dim).
         :return torch.Tensor: ELBO value.
         """
-        # print(x.device, y.device, self.sigma.device, self(x).device)
         self.current_mnll = self.mnll(y, self(x), self.sigma)
         self.current_kl = sum([layer.kl for layer in self.modules() if isinstance(layer, WHVI)])
         return self.current_mnll + self.current_kl

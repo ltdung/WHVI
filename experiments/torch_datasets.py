@@ -6,8 +6,7 @@ from torch.utils.data import Dataset
 
 
 class ToyDataset(Dataset, ABC):
-    def __init__(self, device, n=128):
-        self.device = device
+    def __init__(self, n=128):
         self.n = n
 
         # It seems that y = f(x) + eps where eps ~ N(0, exp(-3)). The authors do not explicitly say what f is.
@@ -19,8 +18,8 @@ class ToyDataset(Dataset, ABC):
         x = x[torch.where((x < 0.5) | (x > 1.4))]
         y = self.f(x) + torch.distributions.Normal(0, np.sqrt(np.exp(-3))).sample((len(x),))
 
-        self.x = torch.reshape(x, (-1, 1)).to(device)
-        self.y = torch.reshape(y, (-1, 1)).to(device)
+        self.x = torch.reshape(x, (-1, 1))
+        self.y = torch.reshape(y, (-1, 1))
 
     def make_poly_coef(self):
         xs_poly = [-2.0, -1.5, -0.8, 0.0, 0.5, 1.4, 2.0, 2.7, 3.0]
