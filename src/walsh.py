@@ -26,11 +26,8 @@ def fwht(A: torch.Tensor):
 
 
 class FWHT(torch.autograd.Function):
-    def __init__(self, device):
-        self.device = device
-
     @staticmethod
-    def transform(tensor):
+    def transform(tensor, device):
         """
         Simple implementation of FWHT, receiving as input a torch Tensor.
         Source: https://discuss.pytorch.org/t/fast-walsh-hadamard-transform/19341
@@ -49,7 +46,7 @@ class FWHT(torch.autograd.Function):
             h *= 2
 
         # result /= np.sqrt(n)  # Make H orthonormal
-        return torch.from_numpy(result)  # transform back to torch
+        return torch.from_numpy(result).to(device)  # transform back to torch
 
     @staticmethod
     def forward(ctx, input):

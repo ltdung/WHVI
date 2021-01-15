@@ -16,7 +16,7 @@ class ToyDataset(Dataset, ABC):
         self.coef = self.make_poly_coef()
 
         x = torch.distributions.Uniform(-1, 2).sample((n,))
-        x = x[torch.where((x < 0.4) | (x > 1.4))]
+        x = x[torch.where((x < 0.5) | (x > 1.4))]
         y = self.f(x) + torch.distributions.Normal(0, np.sqrt(np.exp(-3))).sample((len(x),))
 
         self.x = torch.reshape(x, (-1, 1)).to(device)
