@@ -61,7 +61,7 @@ class WHVILinear(nn.Module, WHVI):
                     result[j, :], result[j + h, :] = result[j, :] + result[j + h, :], result[j, :] - result[j + h, :]
             h *= 2
 
-        # result /= np.sqrt(n)  # Make H orthonormal
+        result /= math.sqrt(n)  # Make H orthonormal
         return torch.from_numpy(result).to(self.device)  # transform back to torch
 
     def w_bar(self, u):

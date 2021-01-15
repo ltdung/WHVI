@@ -1,5 +1,5 @@
 from typing import Iterable
-import numpy as np
+import math
 from tqdm import tqdm
 
 import torch
@@ -69,7 +69,7 @@ class WHVINetwork(nn.Sequential):
 
 
 class WHVIRegression(WHVINetwork):
-    neg_half_log_2pi = -0.5 * np.log(2 * np.pi)
+    log_rsqrt_2pi = math.log(1 / math.sqrt(2 * math.pi))
 
     def __init__(self, modules: Iterable[nn.Module], sigma=1.0, **kwargs):
         super().__init__(modules, **kwargs)
@@ -77,13 +77,11 @@ class WHVIRegression(WHVINetwork):
         self.current_kl = 0.0
         self.current_mnll = 0.0
 
-    def likelihood(self, y: torch.Tensor, y_hat: torch.Tensor, sigma: torch.Tensor):
-        n = len(y)
-        n_samples = y_hat.size()[2]
-        squared_terms = torch.zeros((n,))
-        for j in range(n_samples):
-            squared_terms[j] = torch.sum(torch.square(y - y_hat[..., j])) / sigma ** 2
-        return n * (self.neg_half_log_2pi - torch.log(sigma)) - 0.5 * torch.mean(squared_terms)
+    def mnll(self, y: torch.Tensor, y_hat: torch.Tensor, sigma: torch.Tensor):
+        sums_of_squares = torch.zeros((y_hat.size()[2],)).to(y.device)
+        for j in range(len(sums_of_squares)):
+            sums_of_squares[j] = torch.sum(torch.square(y - y_hat[..., j]))
+        return -torch.mean(len(y) * (self.log_rsqrt_2pi - torch.log(sigma)) - 1 / (2 * sigma ** 2) * sums_of_squares)
 
     def loss(self, x: torch.Tensor, y: torch.Tensor, *args, **kwargs) -> torch.Tensor:
         """
@@ -94,7 +92,8 @@ class WHVIRegression(WHVINetwork):
         :param torch.Tensor y: network target of shape (batch_size, out_dim).
         :return torch.Tensor: ELBO value.
         """
-        self.current_mnll = -self.likelihood(y, self(x), self.sigma)
+        # print(x.device, y.device, self.sigma.device, self(x).device)
+        self.current_mnll = self.mnll(y, self(x), self.sigma)
         self.current_kl = sum([layer.kl for layer in self.modules() if isinstance(layer, WHVI)])
         return self.current_mnll + self.current_kl
 
