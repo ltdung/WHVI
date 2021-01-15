@@ -61,16 +61,9 @@ class WHVILinear(nn.Module, WHVI):
         )
         return kl
 
-    def forward(self, x, sample=True):
-        S1H = FWHT_diag.apply(self.s1).T
-        V = FWHT_diag.apply(self.s2)
-        A = torch.cat([(matmul_diag_right(S1H, V[:, i])).T for i in range(self.D)]).T
-        if sample:
-            epsilon = torch.randn(self.D)  # Sample independent Gaussian noise
-            # Sample W * h according to the local re-parametrization trick. It's also faster to just multiply the
-            # diagonal elements with the vector elements than to construct the whole diagonal matrix.
-            b = x @ (self.w_bar(self.g_mu) + self.w_bar(self.g_sigma_sqrt_diagonal * epsilon)).T
-        else:
-            W = matmul_diag_right(A, self.g_mu)
-            b = F.linear(x, W)
+    def forward(self, x):
+        epsilon = torch.randn(self.D)  # Sample independent Gaussian noise
+        # Sample W * h according to the local re-parametrization trick. It's also faster to just multiply the
+        # diagonal elements with the vector elements than to construct the whole diagonal matrix.
+        b = x @ (self.w_bar(self.g_mu) + self.w_bar(self.g_sigma_sqrt_diagonal * epsilon)).T
         return b

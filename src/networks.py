@@ -4,7 +4,6 @@ import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-import torch.optim as optim
 
 from layers import WHVILinear, WHVI
 
@@ -119,52 +118,3 @@ class WHVIRegression(WHVINetwork):
                     print(f"[Epoch {epoch}] Loss = {float(loss):.3f}, sigma = {float(self.sigma):.3f}")
 
         self.eval()
-
-
-if __name__ == '__main__':
-
-    torch.manual_seed(0)
-    inputs = torch.tensor(data=[
-        [1., 0.],
-        [0., 1.],
-        [0., 1.2],
-        [0., 1.3],
-        [1.4, 0.],
-    ])
-    targets = torch.reshape((inputs ** 3 - torch.exp(inputs * 2)).sum(dim=1), (-1, 1))  # A toy function
-
-    net = WHVIRegression(n_in=2, n_out=1, D=2 ** 7, loss_function=F.mse_loss)
-    net.train()
-
-    optimizer = optim.Adam(net.parameters())
-    loss_history = []
-    epoch_time = []
-    import time
-
-    for epoch in range(1500):
-        print(f'Epoch {epoch + 1}')
-        t0 = time.time()
-        loss = net.loss(inputs, targets)
-        loss_history.append(float(loss))
-        loss.backward()
-        optimizer.step()
-        net.zero_grad()
-        epoch_time.append(time.time() - t0)
-
-    import matplotlib.pyplot as plt
-
-    fig, axes = plt.subplots(2, 1, sharex=True)
-
-    axes[0].plot(loss_history)
-    axes[0].set_ylabel('Loss')
-
-    axes[1].plot(epoch_time)
-    axes[1].set_ylabel('Time [s]')
-    axes[1].set_xlabel('Epoch')
-    plt.show()
-
-    import numpy as np
-
-    print(f'Median epoch time: {np.median(epoch_time)} s')
-    print(f'Mean epoch time: {np.mean(epoch_time)} s')
-    print(f'Total time: {np.sum(epoch_time)} s')
