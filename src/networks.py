@@ -1,5 +1,6 @@
 from typing import Iterable
 import numpy as np
+from tqdm import tqdm
 
 import torch
 import torch.nn as nn
@@ -73,6 +74,8 @@ class WHVIRegression(WHVINetwork):
     def __init__(self, modules: Iterable[nn.Module], sigma=1.0, **kwargs):
         super().__init__(modules, **kwargs)
         self.sigma = nn.Parameter(torch.tensor(sigma))
+        self.current_kl = 0.0
+        self.current_mnll = 0.0
 
     def likelihood(self, y: torch.Tensor, y_hat: torch.Tensor, sigma: torch.Tensor):
         n = len(y)
@@ -91,30 +94,38 @@ class WHVIRegression(WHVINetwork):
         :param torch.Tensor y: network target of shape (batch_size, out_dim).
         :return torch.Tensor: ELBO value.
         """
-        mean_nll = -self.likelihood(y, self(x), self.sigma)
-        kl = sum([layer.kl for layer in self.modules() if isinstance(layer, WHVI)])
-        return mean_nll + kl
+        self.current_mnll = -self.likelihood(y, self(x), self.sigma)
+        self.current_kl = sum([layer.kl for layer in self.modules() if isinstance(layer, WHVI)])
+        return self.current_mnll + self.current_kl
 
-    def train_model(self, data_loader, optimizer, epochs1: int = 500, epochs2: int = 50000):
+    def train_model(self, data_loader, optimizer, epochs1: int = 500, epochs2: int = 50000, pbar_update_period=20):
         self.train()
         self.sigma.requires_grad = False  # Do not optimize sigma
-        for epoch in range(epochs1):
+        progress_bar = tqdm(
+            range(epochs1),
+            desc=f'[Fix. var.] WHVI (fix sigma), KL = {self.current_kl:.2f}, MNLL = {self.current_mnll:.2f}'
+        )
+        for epoch in progress_bar:
             for batch_index, (data_x, data_y) in enumerate(data_loader):
                 loss = self.loss(data_x, data_y, self.sigma)
                 loss.backward()
                 optimizer.step()
                 self.zero_grad()
-                if epoch % 100 == 0 and batch_index == 0:
-                    print(f"[Epoch {epoch}] Loss = {float(loss):.3f}, sigma = {float(self.sigma):.3f}")
+            if epoch % pbar_update_period == 0:
+                progress_bar.set_description(f'[Fix. var.] KL = {self.current_kl:.2f}, MNLL = {self.current_mnll:.2f}')
 
         self.sigma.requires_grad = True  # Optimize sigma
-        for epoch in range(epochs2):
+        progress_bar = tqdm(
+            range(epochs2),
+            desc=f'[Opt. var.] WHVI (fix sigma), KL = {self.current_kl:.2f}, MNLL = {self.current_mnll:.2f}'
+        )
+        for epoch in progress_bar:
             for batch_index, (data_x, data_y) in enumerate(data_loader):
                 loss = self.loss(data_x, data_y, self.sigma)
                 loss.backward()
                 optimizer.step()
                 self.zero_grad()
-                if epoch % 100 == 0 and batch_index == 0:
-                    print(f"[Epoch {epoch}] Loss = {float(loss):.3f}, sigma = {float(self.sigma):.3f}")
+            if epoch % pbar_update_period == 0:
+                progress_bar.set_description(f'[Opt. var.] KL = {self.current_kl:.2f}, MNLL = {self.current_mnll:.2f}')
 
         self.eval()

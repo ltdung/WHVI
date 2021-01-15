@@ -3,10 +3,10 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from walsh import FWHT, FWHT_diag
-from utils import matmul_diag_left, matmul_diag_right
+from walsh import FWHT, build_H
+from utils import matmul_diag_left
 
-
+# TODO move to CUDA
 # TODO space complexity must be O(D), check FASTFOOD.
 # TODO time complexity must be O(DlogD), check FASTFOOD.
 # TODO Hx must be computed in O(DlogD) time and O(1) space using the in-place version of FWHT.
@@ -31,10 +31,11 @@ class WHVILinear(nn.Module, WHVI):
         super().__init__()
 
         self.D = D
+        self.H = build_H(D)
         self.lambda_ = lambda_
 
-        self.s1 = nn.Parameter(torch.ones(D) * 0.01)  # Diagonal elements of S1
-        self.s2 = nn.Parameter(torch.ones(D) * 0.01)  # Diagonal elements of S2
+        self.s1 = nn.Parameter(torch.ones(D) * 0.01)  # Diagonal elements of S1 - what is a good initialization? TODO
+        self.s2 = nn.Parameter(torch.ones(D) * 0.01)  # Diagonal elements of S2 - what is a good initialization? TODO
         self.g_mu = nn.Parameter(torch.zeros(D))
         self.g_rho = nn.Parameter(torch.distributions.Uniform(-5, -4).sample((D,)))  # g_sigma_sqrt = softplus(g_rho)
 
@@ -45,7 +46,7 @@ class WHVILinear(nn.Module, WHVI):
     def w_bar(self, u):
         assert u.size() == (self.D,)
         # Is it possible that we can perform FWHT even faster if the input matrix is diagonal?
-        return matmul_diag_left(self.s1, FWHT.apply(matmul_diag_left(u, FWHT_diag.apply(self.s2))))
+        return matmul_diag_left(self.s1, FWHT.apply(matmul_diag_left(u, self.H * self.s2)))
 
     @property
     def kl(self):

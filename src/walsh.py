@@ -25,26 +25,10 @@ def fwht(A: torch.Tensor):
     return A
 
 
-class FWHT_diag(torch.autograd.Function):
-    """
-    FWHT on a diagonal matrix. Accepts the main diagonal elements instead of the whole diagonal matrix.
-    """
-
-    @staticmethod
-    def transform(diagonal_elements):
-        H = build_H(diagonal_elements.size(0))
-        return H * diagonal_elements
-
-    @staticmethod
-    def forward(ctx, input):
-        return FWHT_diag.transform(input)
-
-    @staticmethod
-    def backward(ctx, grad_output):
-        return FWHT_diag.transform(grad_output)
-
-
 class FWHT(torch.autograd.Function):
+    def __init__(self, device):
+        self.device = device
+
     @staticmethod
     def transform(tensor):
         """
@@ -55,7 +39,7 @@ class FWHT(torch.autograd.Function):
         """
         n = len(tensor)
         # result = np.copy(tensor.detach().numpy())  # transform to numpy
-        result = tensor.detach().numpy()  # transform to numpy
+        result = tensor.detach().cpu().numpy()  # transform to numpy
 
         h = 1
         while h < n:
