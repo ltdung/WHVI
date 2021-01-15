@@ -1,4 +1,5 @@
-from typing import Any, Iterable
+from typing import Iterable
+import numpy as np
 
 import torch
 import torch.nn as nn
@@ -49,7 +50,7 @@ class WHVINetwork(nn.Sequential):
         assert predictions.dim() == 3
         return predictions
 
-    def loss(self, x: torch.Tensor, y: torch.Tensor) -> torch.Tensor:
+    def loss(self, x: torch.Tensor, y: torch.Tensor, *args, **kwargs) -> torch.Tensor:
         """
         Compute ELBO given inputs x and target y.
 
@@ -67,44 +68,57 @@ class WHVINetwork(nn.Sequential):
         return mean_nll + kl
 
 
-class WHVIRegression(nn.Module):
-    def __init__(self, n_in, n_out, D, loss_function=F.mse_loss):
+class WHVIRegression(WHVINetwork):
+    neg_half_log_2pi = -0.5 * np.log(2 * np.pi)
+
+    def __init__(self, modules: Iterable[nn.Module], sigma=1.0, **kwargs):
+        super().__init__(modules, **kwargs)
+        self.sigma = nn.Parameter(torch.tensor(sigma))
+
+    def likelihood(self, y: torch.Tensor, y_hat: torch.Tensor, sigma: torch.Tensor):
+        n = len(y)
+        n_samples = y_hat.size()[2]
+        squared_terms = torch.zeros((n,))
+        for j in range(n_samples):
+            squared_terms[j] = torch.sum(torch.square(y - y_hat[..., j])) / sigma ** 2
+        return n * (self.neg_half_log_2pi - torch.log(sigma)) - 0.5 * torch.mean(squared_terms)
+
+    def loss(self, x: torch.Tensor, y: torch.Tensor, *args, **kwargs) -> torch.Tensor:
         """
-        Regression feed-forward neural network with a single WHVI layer.
+        Compute ELBO given inputs x and target y.
+        The likelihood is assumed to be according to the argument sigma.
 
-        :param n_in: input dimensionality.
-        :param n_out: output dimensionality.
-        :param D: number of WHVI weight matrix rows/columns.
+        :param torch.Tensor x: network input of shape (batch_size, in_dim).
+        :param torch.Tensor y: network target of shape (batch_size, out_dim).
+        :return torch.Tensor: ELBO value.
         """
-        super().__init__()
-        assert (D & (D >> 1)) == 0 and D > 0
-        self.loss_function = loss_function
+        mean_nll = -self.likelihood(y, self(x), self.sigma)
+        kl = sum([layer.kl for layer in self.modules() if isinstance(layer, WHVI)])
+        return mean_nll + kl
 
-        self.l1 = nn.Linear(n_in, D)
-        self.l2 = WHVILinear(D)
-        self.l3 = nn.Linear(D, n_out)
+    def train_model(self, data_loader, optimizer, epochs1: int = 500, epochs2: int = 50000):
+        self.train()
+        self.sigma.requires_grad = False  # Do not optimize sigma
+        for epoch in range(epochs1):
+            for batch_index, (data_x, data_y) in enumerate(data_loader):
+                loss = self.loss(data_x, data_y, self.sigma)
+                loss.backward()
+                optimizer.step()
+                self.zero_grad()
+                if epoch % 100 == 0 and batch_index == 0:
+                    print(f"[Epoch {epoch}] Loss = {float(loss):.3f}, sigma = {float(self.sigma):.3f}")
 
-    def forward(self, x):
-        x = F.relu(self.l1(x))
-        x = F.relu(self.l2(x))
-        x = self.l3(x)
-        return x
+        self.sigma.requires_grad = True  # Optimize sigma
+        for epoch in range(epochs2):
+            for batch_index, (data_x, data_y) in enumerate(data_loader):
+                loss = self.loss(data_x, data_y, self.sigma)
+                loss.backward()
+                optimizer.step()
+                self.zero_grad()
+                if epoch % 100 == 0 and batch_index == 0:
+                    print(f"[Epoch {epoch}] Loss = {float(loss):.3f}, sigma = {float(self.sigma):.3f}")
 
-    def loss(self, X, y, n_samples=10):
-        assert n_samples > 0
-
-        nll_samples = torch.zeros(n_samples)
-        kl_samples = torch.zeros(n_samples)
-        for i in range(n_samples):
-            y_hat = self(X)
-            nll = self.loss_function(y_hat, y)
-            kl = self.l2.kl  # Take KL terms of all WHVI layers and sum them
-            nll_samples[i] = nll
-            kl_samples[i] = kl
-
-        mean_nll = nll_samples.mean()
-        mean_kl = kl_samples.mean()
-        return mean_nll + mean_kl
+        self.eval()
 
 
 if __name__ == '__main__':
