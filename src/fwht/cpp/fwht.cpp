@@ -25,13 +25,6 @@ at::Tensor fwht_forward(torch::Tensor x) {
 }
 
 torch::Tensor fwht_backward(torch::Tensor grad_output) {
-//    int n_batches = grad_output.size(0);
-//    int D = grad_output.size(1);
-//    torch::Tensor result = torch::zeros({n_batches, D, D});
-//    for (int i = 0; i < n_batches; ++i) {
-//        result[i] = torch::eye(D);
-//    }
-//    return {result};
     return fwht(grad_output);
 }
 
