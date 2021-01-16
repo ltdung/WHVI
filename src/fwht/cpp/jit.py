@@ -1,4 +1,4 @@
 from torch.utils.cpp_extension import load
 
-fwht_cpp = load(name="fwhtm_cpp", sources=["fwhtm.cpp"], verbose=True)
+fwht_cpp = load(name="fwht_cpp", sources=["fwht.cpp"], verbose=True)
 help(fwht_cpp)

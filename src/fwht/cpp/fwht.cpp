@@ -1,30 +1,36 @@
 #include <torch/extension.h>
 #include <vector>
 
-// s'(z) = (1 - s(z)) * s(z)
-torch::Tensor d_sigmoid(torch::Tensor z) {
-  auto s = torch::sigmoid(z);
-  return (1 - s) * s;
+std::vector<torch::Tensor> fwht_forward(torch::Tensor x) {
+    int n = x.size(1);
+    for (int batch_item_index = 0; batch_item_index < x.size(0); ++batch_item_index) {
+        int h = 1;
+        while (h < n) {
+            for (int i = 0; i < n; i += (2 * h)) {
+                for (int j = i; j < i + h; ++j) {
+                    auto tmp = x[batch_item_index][j] - x[batch_item_index][j + h];
+                    x[batch_item_index][j] += x[batch_item_index][j + h];
+                    x[batch_item_index][j + h] = tmp;
+                }
+            }
+            h *= 2;
+        }
+    }
+    return {x};
 }
 
-// tanh'(z) = 1 - tanh^2(z)
-torch::Tensor d_tanh(torch::Tensor z) {
-  return 1 - z.tanh().pow(2);
-}
-
-// elu'(z) = relu'(z) + { alpha * exp(z) if (alpha * (exp(z) - 1)) < 0, else 0}
-torch::Tensor d_elu(torch::Tensor z, torch::Scalar alpha = 1.0) {
-  auto e = z.exp();
-  auto mask = (alpha * (e - 1)) < 0;
-  return (z > 0).type_as(z) + mask.type_as(z) * (alpha * e);
-}
-
-std::vector<torch::Tensor> fwht_forward(... TODO args here ...) {
-  return {... return values here ... };
-}
-
-std::vector<torch::Tensor> fwht_backward(... TODO args here ...) {
-  return {... return values here ... };
+std::vector<torch::Tensor> fwht_backward(torch::Tensor grad_output) {
+    std::cout << "Got to the start" << std::endl;
+    int n_batches = grad_output.size(0);
+    std::cout << "Got to the start" << std::endl;
+    int n = grad_output.size(1);
+    std::cout << "Got to the start" << std::endl;
+    std::vector<torch::Tensor> result(n_batches);
+    for (int i = 0; i < n_batches; ++i) {
+        std::cout << i << std::endl;
+        result[i] = torch::eye(n);
+    }
+    return {result};
 }
 
 PYBIND11_MODULE(TORCH_EXTENSION_NAME, m) {

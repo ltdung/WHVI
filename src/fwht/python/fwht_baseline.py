@@ -1,5 +1,6 @@
 from torch.autograd import Function
 import torch
+import torch.nn as nn
 
 
 class FWHTFunction(Function):
@@ -24,9 +25,9 @@ class FWHTFunction(Function):
         return FWHTFunction.transform(grad_output)
 
 
-class FWHT(torch.nn.Module):
+class FWHT(nn.Module):
     def __init__(self):
         super(FWHT, self).__init__()
 
     def forward(self, x):
-        return FWHTFunction.applx(x)
+        return FWHTFunction.apply(x)
