@@ -4,19 +4,19 @@
 at::Tensor fwht(torch::Tensor x_in) {
     torch::Tensor x = torch::clone(x_in);  // NOT IN PLACE! If we skip this line, then autograd gets messed up. FIXME.
     int n = x.size(1);
-    for (int batch_item_index = 0; batch_item_index < x.size(0); ++batch_item_index) {
-        int h = 1;
-        while (h < n) {
-            for (int i = 0; i < n; i += (2 * h)) {
-                for (int j = i; j < i + h; ++j) {
-                    auto tmp = x[batch_item_index][j] - x[batch_item_index][j + h];
-                    x[batch_item_index][j] += x[batch_item_index][j + h];
-                    x[batch_item_index][j + h] = tmp;
-                }
+    x = x.transpose(0, 1);  // Flip dimensions
+    int h = 1;
+    while (h < n) {
+        for (int i = 0; i < n; i += (2 * h)) {
+            for (int j = i; j < i + h; ++j) {
+                auto tmp = x[j] - x[j + h];
+                x[j] += x[j + h];
+                x[j + h] = tmp;
             }
-            h *= 2;
         }
+        h *= 2;
     }
+    x = x.transpose(0, 1);  // Flip back
     return x;
 }
 
