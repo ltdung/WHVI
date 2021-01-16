@@ -2,14 +2,14 @@ import unittest
 
 import torch
 import torch.nn as nn
-from src.networks import WHVILinear, WHVINetwork
+from src.networks import WHVILinear, WHVIRegression
 
 
-class WHVINetworkTestCase(unittest.TestCase):
+class RegressionTestCase(unittest.TestCase):
     def test_dimensions(self):
         for k in range(1, 21):
-            net = WHVINetwork([
-                nn.Linear(1, 8), WHVILinear(8), nn.Linear(8, k)
+            net = WHVIRegression([
+                nn.Linear(1, 8), nn.ReLU(), WHVILinear(8), nn.ReLU(), nn.Linear(8, k)
             ], train_samples=5, eval_samples=6)
 
             net.train()
