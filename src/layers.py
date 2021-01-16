@@ -35,7 +35,7 @@ class WHVILinear(nn.Module, WHVI):
         self.D = D
         self.H = build_H(D)
         self.lambda_ = lambda_
-        self.epsilon_block = torch.randn(D * 30)
+        # self.epsilon_block = torch.randn(D * 30)
 
         self.s1 = nn.Parameter(torch.ones(D) * 0.01)  # Diagonal elements of S1 - what is a good initialization? TODO
         self.s2 = nn.Parameter(torch.ones(D) * 0.01)  # Diagonal elements of S2 - what is a good initialization? TODO
@@ -67,7 +67,8 @@ class WHVILinear(nn.Module, WHVI):
 
     def forward(self, x):
         # Sample Gaussian noise with the gaussian block trick.
-        epsilon = self.epsilon_block[torch.tensor(random.sample(range(len(self.epsilon_block)), self.D))]
+        # epsilon = self.epsilon_block[torch.tensor(random.sample(range(len(self.epsilon_block)), self.D))]
+        epsilon = torch.randn(self.D)  # Sample without the trick
 
         # Sample W * h according to the local re-parametrization trick. It's also faster to just multiply the
         # diagonal elements with the vector elements than to construct the whole diagonal matrix.
