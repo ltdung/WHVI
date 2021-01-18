@@ -31,7 +31,6 @@ class WHVILinear(nn.Module, WHVI):
         self.D = D
         self.H = build_H(D)
         self.lambda_ = lambda_
-        # self.epsilon_block = torch.randn(D * 30)
 
         self.s1 = nn.Parameter(torch.ones(D) * 0.01)  # Diagonal elements of S1 - what is a good initialization? TODO
         self.s2 = nn.Parameter(torch.ones(D) * 0.01)  # Diagonal elements of S2 - what is a good initialization? TODO
@@ -41,11 +40,6 @@ class WHVILinear(nn.Module, WHVI):
     @property
     def g_sigma_sqrt_diagonal(self):
         return F.softplus(self.g_rho)
-
-    def w_bar(self, u):
-        assert u.size() == (self.D,)
-        # Is it possible that we can perform FWHT even faster if the input matrix is diagonal?
-        return matmul_diag_left(self.s1, FWHT.apply(matmul_diag_left(u, self.H * self.s2)))
 
     @property
     def kl(self):
@@ -61,12 +55,14 @@ class WHVILinear(nn.Module, WHVI):
         )
         return kl
 
-    def forward(self, x):
-        # Sample Gaussian noise with the gaussian block trick.
-        # epsilon = self.epsilon_block[torch.tensor(random.sample(range(len(self.epsilon_block)), self.D))]
-        epsilon = torch.randn(self.D)  # Sample without the trick
+    def sample_W(self):
+        epsilon = torch.randn(self.D)
+        HS2 = self.H * self.s2
+        mu_term = matmul_diag_left(self.s1, FWHT.apply(matmul_diag_left(self.g_mu, HS2)))
+        sigma_term = matmul_diag_left(self.s1, FWHT.apply(matmul_diag_left(self.g_sigma_sqrt_diagonal * epsilon, HS2)))
+        W = mu_term + sigma_term
+        return W
 
-        # Sample W * h according to the local re-parametrization trick. It's also faster to just multiply the
-        # diagonal elements with the vector elements than to construct the whole diagonal matrix.
-        b = x @ (self.w_bar(self.g_mu) + self.w_bar(self.g_sigma_sqrt_diagonal * epsilon)).T
-        return b
+    def forward(self, x):
+        W = self.sample_W()
+        return F.linear(x, W)
