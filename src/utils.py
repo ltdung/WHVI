@@ -5,3 +5,7 @@ def matmul_diag_left(D_diagonal, A):
 
 def matmul_diag_right(A, D_diagonal):
     return A * D_diagonal
+
+
+def is_pow_of_2(x):
+    return x and (not (x & (x - 1)))
