@@ -45,12 +45,11 @@ class WHVILinear(nn.Module, WHVI):
     def kl(self):
         # KL divergence from the posterior to the prior, but the prior has zero mean and fully factorized covariance
         # lambda_ * Identity.
-        g_sigma_diagonal = self.g_sigma_sqrt_diagonal ** 2
         kl = 0.5 * (
                 self.D * math.log(self.lambda_)
-                - torch.sum(torch.log(g_sigma_diagonal))
+                - torch.sum(2 * torch.log(self.g_sigma_sqrt_diagonal))
                 - self.D
-                + torch.sum(g_sigma_diagonal / self.lambda_)
+                + torch.sum(self.g_sigma_sqrt_diagonal ** 2 / self.lambda_)
                 + torch.dot(self.g_mu, self.g_mu) / self.lambda_
         )
         return kl
