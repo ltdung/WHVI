@@ -7,7 +7,7 @@ from utils import matmul_diag_left
 from walsh import build_H, FWHT
 
 
-class WHVIMatrix(nn.Module):
+class WHVISquarePow2Matrix(nn.Module):
     def __init__(self, D, lambda_=1e-5):
         super().__init__()
         self.D = D
@@ -67,7 +67,7 @@ class WHVIStackedMatrix(nn.Module):
         self.lambda_ = lambda_
 
         self.D_in, self.D_out, self.padding, self.stack = self.setup_dimensions(n_in, n_out)
-        self.weight_matrices = nn.ModuleList([WHVIMatrix(self.D_in, lambda_) for _ in range(self.stack)])
+        self.weight_matrices = nn.ModuleList([WHVISquarePow2Matrix(self.D_in, lambda_) for _ in range(self.stack)])
 
     @staticmethod
     def setup_dimensions(D_in, D_out):
@@ -109,3 +109,25 @@ class WHVIStackedMatrix(nn.Module):
         output = F.linear(x_padded, self.sample())
         output = output[..., :self.n_out]  # Remove the extra elements
         return output
+
+
+class WHVIColumnMatrix(nn.Module):
+    def __init__(self, n_out, lambda_=1e-5, transposed=False):
+        super().__init__()
+        self.D = n_out
+        self.D_adjusted = 2 ** math.ceil(math.log(n_out, 2))
+        self.weight_submodule = WHVISquarePow2Matrix(self.D_adjusted, lambda_)
+        self.transposed = transposed
+
+    @property
+    def kl(self):
+        return self.weight_submodule.kl
+
+    def sample(self):
+        matrix = torch.reshape(self.weight_submodule.sample(), (-1, 1))[:self.D]
+        if self.transposed:
+            return matrix.T
+        return matrix
+
+    def forward(self, x):
+        return F.linear(x, self.sample())

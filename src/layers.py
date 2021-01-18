@@ -1,7 +1,7 @@
 import torch.nn as nn
 
 from utils import is_pow_of_2
-from weights import WHVIMatrix, WHVIStackedMatrix
+from weights import WHVISquarePow2Matrix, WHVIStackedMatrix, WHVIColumnMatrix
 
 
 class WHVI:
@@ -22,9 +22,12 @@ class WHVILinear(nn.Module, WHVI):
         :param lambda_: prior variance.
         """
         super().__init__()
-
-        if n_in == n_out and is_pow_of_2(n_in):
-            self.weight_submodule = WHVIMatrix(n_in, lambda_)
+        if n_in == 1:
+            self.weight_submodule = WHVIColumnMatrix(n_out, lambda_)
+        elif n_out == 1:
+            self.weight_submodule = WHVIColumnMatrix(n_in, lambda_, transposed=True)
+        elif n_in == n_out and is_pow_of_2(n_in):
+            self.weight_submodule = WHVISquarePow2Matrix(n_in, lambda_)
         else:
             self.weight_submodule = WHVIStackedMatrix(n_in, n_out, lambda_)
 
