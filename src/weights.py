@@ -5,7 +5,7 @@ import torch.nn.functional as F
 
 from utils import matmul_diag_left
 from walsh import build_H
-from fwht.cpp.fwht import FWHTFunction as FWHT
+from fwht.cpp.fwht import FWHT
 
 
 class WHVISquarePow2Matrix(nn.Module):
@@ -21,6 +21,8 @@ class WHVISquarePow2Matrix(nn.Module):
         self.s2 = nn.Parameter(torch.ones(D) * 0.01)
         self.g_mu = nn.Parameter(torch.zeros(D))
         self.g_rho = nn.Parameter(torch.distributions.Uniform(-5, -4).sample((D,)))
+        self.FWHT1 = FWHT()  # This is a module
+        self.FWHT2 = FWHT()  # This is a module
 
     @property
     def g_sigma_sqrt_diagonal(self):
@@ -42,8 +44,8 @@ class WHVISquarePow2Matrix(nn.Module):
     def sample(self):
         epsilon = torch.randn(self.D, device=self.device)
         HS2 = self.H * self.s2
-        mu_term = matmul_diag_left(self.s1, FWHT.apply(matmul_diag_left(self.g_mu, HS2)))
-        sigma_term = matmul_diag_left(self.s1, FWHT.apply(matmul_diag_left(self.g_sigma_sqrt_diagonal * epsilon, HS2)))
+        mu_term = matmul_diag_left(self.s1, self.FWHT1(matmul_diag_left(self.g_mu, HS2)))
+        sigma_term = matmul_diag_left(self.s1, self.FWHT2(matmul_diag_left(self.g_sigma_sqrt_diagonal * epsilon, HS2)))
         W = mu_term + sigma_term
         return W
 
@@ -70,7 +72,8 @@ class WHVIStackedMatrix(nn.Module):
         self.lambda_ = lambda_
 
         self.D_in, self.D_out, self.padding, self.stack = self.setup_dimensions(n_in, n_out)
-        self.weight_matrices = nn.ModuleList([WHVISquarePow2Matrix(self.D_in, device=device, lambda_=lambda_) for _ in range(self.stack)])
+        self.weight_matrices = nn.ModuleList(
+            [WHVISquarePow2Matrix(self.D_in, device=device, lambda_=lambda_) for _ in range(self.stack)])
 
     @staticmethod
     def setup_dimensions(D_in, D_out):
