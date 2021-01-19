@@ -83,20 +83,22 @@ class WHVIRegression(WHVINetwork):
         retval = -torch.mean(len(y) * (self.log_rsqrt_2pi - torch.log(sigma)) - 1 / (2 * sigma ** 2) * sums_of_squares)
         return retval
 
-    def loss(self, x: torch.Tensor, y: torch.Tensor, *args, **kwargs) -> torch.Tensor:
+    def loss(self, x: torch.Tensor, y: torch.Tensor, ignore_kl=False, *args, **kwargs) -> torch.Tensor:
         """
         Compute ELBO given inputs x and target y.
         The likelihood is assumed to be according to the argument sigma.
 
         :param torch.Tensor x: network input of shape (batch_size, in_dim).
         :param torch.Tensor y: network target of shape (batch_size, out_dim).
+        :param boolean ignore_kl: if True, calculate loss as just MNLL.
         :return torch.Tensor: ELBO value.
         """
         self.current_mnll = self.mnll(y, self(x), self.sigma)
         self.current_kl = sum([layer.kl for layer in self.modules() if isinstance(layer, WHVI)])
-        return self.current_mnll + self.current_kl
+        return self.current_mnll + self.current_kl if not ignore_kl else self.current_mnll
 
-    def train_model(self, data_loader, optimizer, epochs1: int = 500, epochs2: int = 50000, pbar_update_period=20):
+    def train_model(self, data_loader, optimizer, epochs1: int = 500, epochs2: int = 50000, pbar_update_period=20,
+                    ignore_kl=False):
         self.train()
         self.sigma.requires_grad = False  # Do not optimize sigma
         progress_bar = tqdm(
@@ -105,7 +107,7 @@ class WHVIRegression(WHVINetwork):
         )
         for epoch in progress_bar:
             for batch_index, (data_x, data_y) in enumerate(data_loader):
-                loss = self.loss(data_x, data_y, self.sigma)
+                loss = self.loss(data_x, data_y, ignore_kl=ignore_kl)
                 loss.backward()
                 optimizer.step()
                 self.zero_grad(set_to_none=True)
@@ -119,7 +121,7 @@ class WHVIRegression(WHVINetwork):
         )
         for epoch in progress_bar:
             for batch_index, (data_x, data_y) in enumerate(data_loader):
-                loss = self.loss(data_x, data_y, self.sigma)
+                loss = self.loss(data_x, data_y, ignore_kl=ignore_kl)
                 loss.backward()
                 optimizer.step()
                 self.zero_grad()
@@ -130,7 +132,7 @@ class WHVIRegression(WHVINetwork):
     def eval_model(self, X_test: torch.Tensor, y_test: torch.Tensor) -> Tuple[float, float]:
         self.eval()
         y_pred = self(X_test)
-        test_mnll = self.mnll(y_test, y_pred, self.sigma)
+        test_mnll = self.mnll(y_test, y_pred)
         # kl = sum([layer.kl for layer in self.modules() if isinstance(layer, WHVI)])  # Unused
         test_error = F.mse_loss(y_pred.mean(dim=2), y_test)
         return float(test_error), float(test_mnll)
