@@ -9,7 +9,7 @@ from fwht.cpp.fwht import FWHT
 
 
 class WHVISquarePow2Matrix(nn.Module):
-    def __init__(self, D, device, lambda_=1e-5):
+    def __init__(self, D, device, lambda_=1e-5, bias=False):
         super().__init__()
         self.D = D
         self.H = build_H(D, device=device)
@@ -17,8 +17,9 @@ class WHVISquarePow2Matrix(nn.Module):
         self.lambda_ = lambda_
         self.padding = 0  # For compatibility with the stacked version
 
-        self.s1 = nn.Parameter(torch.ones(D) * 0.01)
-        self.s2 = nn.Parameter(torch.ones(D) * 0.01)
+        self.bias = nn.Parameter(torch.zeros(D, 1)) if bias else None
+        self.s1 = nn.Parameter(torch.distributions.Bernoulli(torch.tensor([0.5])).sample((D,)) * 2 - 1)
+        self.s2 = nn.Parameter(torch.distributions.Bernoulli(torch.tensor([0.5])).sample((D,)) * 2 - 1)
         self.g_mu = nn.Parameter(torch.zeros(D))
         self.g_rho = nn.Parameter(torch.distributions.Uniform(-5, -4).sample((D,)))
         self.FWHT1 = FWHT()  # This is a module
@@ -50,11 +51,11 @@ class WHVISquarePow2Matrix(nn.Module):
         return W
 
     def forward(self, x):
-        return F.linear(x, self.sample())
+        return F.linear(x, self.sample(), self.bias)
 
 
 class WHVIStackedMatrix(nn.Module):
-    def __init__(self, n_in, n_out, device, lambda_=1e-5):
+    def __init__(self, n_in, n_out, device, lambda_=1e-5, bias=False):
         """
         WHVI matrix with arbitrary dimensions (i.e. possibly non-square).
         A typical WHVI matrix is square with dimensions D x D where D == 2 ** d for some non-negative integer d.
@@ -74,6 +75,7 @@ class WHVIStackedMatrix(nn.Module):
         self.D_in, self.D_out, self.padding, self.stack = self.setup_dimensions(n_in, n_out)
         self.weight_matrices = nn.ModuleList(
             [WHVISquarePow2Matrix(self.D_in, device=device, lambda_=lambda_) for _ in range(self.stack)])
+        self.bias = nn.Parameter(torch.zeros(self.D_out, 1)) if bias else None
 
     @staticmethod
     def setup_dimensions(D_in, D_out):
@@ -113,18 +115,19 @@ class WHVIStackedMatrix(nn.Module):
         # TODO pre-allocate this vector of zeros if possible
         x_padded = torch.zeros((*x.size()[:-1], self.D_in), device=self.device)  # Add the extra zeros
         x_padded[..., :self.n_in] = x
-        output = F.linear(x_padded, self.sample())
+        output = F.linear(x_padded, self.sample(), self.bias)
         output = output[..., :self.n_out]  # Remove the extra elements
         return output
 
 
 class WHVIColumnMatrix(nn.Module):
-    def __init__(self, n_out, device, lambda_=1e-5, transposed=False):
+    def __init__(self, n_out, device, lambda_=1e-5, bias=False, transposed=False):
         super().__init__()
         self.D = n_out
         self.D_adjusted = 2 ** math.ceil(math.log(n_out, 2))
         self.weight_submodule = WHVISquarePow2Matrix(self.D_adjusted, device=device, lambda_=lambda_)
         self.transposed = transposed
+        self.bias = nn.Parameter(torch.zeros(n_out, 1)) if bias else None
 
     @property
     def kl(self):
@@ -137,4 +140,4 @@ class WHVIColumnMatrix(nn.Module):
         return matrix
 
     def forward(self, x):
-        return F.linear(x, self.sample())
+        return F.linear(x, self.sample(), self.bias)

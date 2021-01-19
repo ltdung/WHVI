@@ -13,7 +13,7 @@ class WHVI:
 
 
 class WHVILinear(nn.Module, WHVI):
-    def __init__(self, n_in, n_out, device, lambda_=0.00001):
+    def __init__(self, n_in, n_out, device, lambda_=0.00001, bias=False):
         """
         WHVI feed forward layer.
 
@@ -23,13 +23,13 @@ class WHVILinear(nn.Module, WHVI):
         """
         super().__init__()
         if n_in == 1:
-            self.weight_submodule = WHVIColumnMatrix(n_out, device=device, lambda_=lambda_)
+            self.weight_submodule = WHVIColumnMatrix(n_out, device=device, lambda_=lambda_, bias=bias)
         elif n_out == 1:
-            self.weight_submodule = WHVIColumnMatrix(n_in, device=device, lambda_=lambda_, transposed=True)
+            self.weight_submodule = WHVIColumnMatrix(n_in, device=device, lambda_=lambda_, transposed=True, bias=bias)
         elif n_in == n_out and is_pow_of_2(n_in):
-            self.weight_submodule = WHVISquarePow2Matrix(n_in, device=device, lambda_=lambda_)
+            self.weight_submodule = WHVISquarePow2Matrix(n_in, device=device, lambda_=lambda_, bias=bias)
         else:
-            self.weight_submodule = WHVIStackedMatrix(n_in, n_out, device=device, lambda_=lambda_)
+            self.weight_submodule = WHVIStackedMatrix(n_in, n_out, device=device, lambda_=lambda_, bias=bias)
 
     @property
     def kl(self):
