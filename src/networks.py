@@ -15,7 +15,6 @@ class WHVINetwork(nn.Sequential):
         Sequential neural network which supports WHVI layers.
         The output should be a vector.
 
-        :param args: valid sequence of network layers of type torch.nn.Module.
         :param int train_samples: number of Monte Carlo samples to draw during training.
         :param int eval_samples: number of Monte Carlo samples to draw during evaluation.
 
