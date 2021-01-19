@@ -66,7 +66,8 @@ def evaluate_bayesian_regression_dnn(X: np.ndarray, y: np.ndarray):
 
     test_errors = []
     test_mnlls = []
-    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+    # device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+    device = torch.device('cpu')
     print(device)
 
     for index in range(8):
