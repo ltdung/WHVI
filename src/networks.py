@@ -1,4 +1,4 @@
-from typing import Iterable
+from typing import Iterable, Tuple
 import math
 from tqdm import tqdm
 
@@ -125,5 +125,12 @@ class WHVIRegression(WHVINetwork):
                 self.zero_grad()
             if epoch % pbar_update_period == 0:
                 progress_bar.set_description(f'[Opt. var.] KL = {self.current_kl:.2f}, MNLL = {self.current_mnll:.2f}')
-
         self.eval()
+
+    def eval_model(self, X_test: torch.Tensor, y_test: torch.Tensor) -> Tuple[float, float]:
+        self.eval()
+        y_pred = self(X_test)
+        test_mnll = self.mnll(y_test, y_pred, self.sigma)
+        # kl = sum([layer.kl for layer in self.modules() if isinstance(layer, WHVI)])  # Unused
+        test_error = F.mse_loss(y_pred.mean(dim=2), y_test)
+        return float(test_error), float(test_mnll)

@@ -37,11 +37,15 @@ class WHVISquarePow2Matrix(nn.Module):
         )
         return kl
 
-    def sample(self):
+    def sample(self, use_H=True):
         epsilon = torch.randn(self.D)
         HS2 = self.H * self.s2
-        mu_term = matmul_diag_left(self.s1, FWHT.apply(matmul_diag_left(self.g_mu, HS2)))
-        sigma_term = matmul_diag_left(self.s1, FWHT.apply(matmul_diag_left(self.g_sigma_sqrt_diagonal * epsilon, HS2)))
+        if not use_H:
+            mu_term = matmul_diag_left(self.s1, FWHT.apply(matmul_diag_left(self.g_mu, HS2)))
+            sigma_term = matmul_diag_left(self.s1, FWHT.apply(matmul_diag_left(self.g_sigma_sqrt_diagonal * epsilon, HS2)))
+        else:
+            mu_term = matmul_diag_left(self.s1, self.H @ matmul_diag_left(self.g_mu, HS2))
+            sigma_term = matmul_diag_left(self.s1, self.H @ matmul_diag_left(self.g_sigma_sqrt_diagonal * epsilon, HS2))
         W = mu_term + sigma_term
         return W
 
