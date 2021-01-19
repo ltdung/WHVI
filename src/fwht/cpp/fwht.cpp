@@ -1,5 +1,4 @@
 #include <torch/extension.h>
-#include <vector>
 
 torch::Tensor fwht(torch::Tensor x_in) {
     torch::Tensor x = torch::clone(x_in);  // NOT IN PLACE! If we skip this line, then autograd gets messed up. FIXME.
