@@ -1,7 +1,7 @@
 #include <torch/extension.h>
 #include <vector>
 
-at::Tensor fwht(torch::Tensor x_in) {
+torch::Tensor fwht(torch::Tensor x_in) {
     torch::Tensor x = torch::clone(x_in);  // NOT IN PLACE! If we skip this line, then autograd gets messed up. FIXME.
     int n = x.size(1);
     x = x.transpose(0, 1);  // Flip dimensions
@@ -20,7 +20,7 @@ at::Tensor fwht(torch::Tensor x_in) {
     return x;
 }
 
-at::Tensor fwht_forward(torch::Tensor x) {
+torch::Tensor fwht_forward(torch::Tensor x) {
     return fwht(x);
 }
 
