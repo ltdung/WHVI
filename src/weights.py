@@ -4,14 +4,16 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 from utils import matmul_diag_left
-from walsh import build_H, FWHT
+from walsh import build_H
+from fwht.cpp.fwht import FWHTFunction as FWHT
 
 
 class WHVISquarePow2Matrix(nn.Module):
-    def __init__(self, D, lambda_=1e-5):
+    def __init__(self, D, device, lambda_=1e-5):
         super().__init__()
         self.D = D
-        self.H = build_H(D)
+        self.H = build_H(D, device=device)
+        self.device = device
         self.lambda_ = lambda_
         self.padding = 0  # For compatibility with the stacked version
 
@@ -37,15 +39,11 @@ class WHVISquarePow2Matrix(nn.Module):
         )
         return kl
 
-    def sample(self, use_H=True):
-        epsilon = torch.randn(self.D)
+    def sample(self):
+        epsilon = torch.randn(self.D, device=self.device)
         HS2 = self.H * self.s2
-        if not use_H:
-            mu_term = matmul_diag_left(self.s1, FWHT.apply(matmul_diag_left(self.g_mu, HS2)))
-            sigma_term = matmul_diag_left(self.s1, FWHT.apply(matmul_diag_left(self.g_sigma_sqrt_diagonal * epsilon, HS2)))
-        else:
-            mu_term = matmul_diag_left(self.s1, self.H @ matmul_diag_left(self.g_mu, HS2))
-            sigma_term = matmul_diag_left(self.s1, self.H @ matmul_diag_left(self.g_sigma_sqrt_diagonal * epsilon, HS2))
+        mu_term = matmul_diag_left(self.s1, FWHT.apply(matmul_diag_left(self.g_mu, HS2)))
+        sigma_term = matmul_diag_left(self.s1, FWHT.apply(matmul_diag_left(self.g_sigma_sqrt_diagonal * epsilon, HS2)))
         W = mu_term + sigma_term
         return W
 
@@ -54,7 +52,7 @@ class WHVISquarePow2Matrix(nn.Module):
 
 
 class WHVIStackedMatrix(nn.Module):
-    def __init__(self, n_in, n_out, lambda_=1e-5):
+    def __init__(self, n_in, n_out, device, lambda_=1e-5):
         """
         WHVI matrix with arbitrary dimensions (i.e. possibly non-square).
         A typical WHVI matrix is square with dimensions D x D where D == 2 ** d for some non-negative integer d.
@@ -68,10 +66,11 @@ class WHVIStackedMatrix(nn.Module):
 
         self.n_in = n_in
         self.n_out = n_out
+        self.device = device
         self.lambda_ = lambda_
 
         self.D_in, self.D_out, self.padding, self.stack = self.setup_dimensions(n_in, n_out)
-        self.weight_matrices = nn.ModuleList([WHVISquarePow2Matrix(self.D_in, lambda_) for _ in range(self.stack)])
+        self.weight_matrices = nn.ModuleList([WHVISquarePow2Matrix(self.D_in, device=device, lambda_=lambda_) for _ in range(self.stack)])
 
     @staticmethod
     def setup_dimensions(D_in, D_out):
@@ -108,7 +107,8 @@ class WHVIStackedMatrix(nn.Module):
         return torch.cat([weight.sample() for weight in self.weight_matrices])
 
     def forward(self, x):
-        x_padded = torch.zeros((*x.size()[:-1], self.D_in))  # Add the extra zeros
+        # TODO pre-allocate this vector of zeros if possible
+        x_padded = torch.zeros((*x.size()[:-1], self.D_in), device=self.device)  # Add the extra zeros
         x_padded[..., :self.n_in] = x
         output = F.linear(x_padded, self.sample())
         output = output[..., :self.n_out]  # Remove the extra elements
@@ -116,11 +116,11 @@ class WHVIStackedMatrix(nn.Module):
 
 
 class WHVIColumnMatrix(nn.Module):
-    def __init__(self, n_out, lambda_=1e-5, transposed=False):
+    def __init__(self, n_out, device, lambda_=1e-5, transposed=False):
         super().__init__()
         self.D = n_out
         self.D_adjusted = 2 ** math.ceil(math.log(n_out, 2))
-        self.weight_submodule = WHVISquarePow2Matrix(self.D_adjusted, lambda_)
+        self.weight_submodule = WHVISquarePow2Matrix(self.D_adjusted, device=device, lambda_=lambda_)
         self.transposed = transposed
 
     @property

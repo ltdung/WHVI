@@ -66,6 +66,7 @@ def evaluate_bayesian_regression_dnn(X: np.ndarray, y: np.ndarray):
 
     test_errors = []
     test_mnlls = []
+    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
     for index in range(8):
         print(f'Iteration {index + 1}/8')
@@ -74,19 +75,20 @@ def evaluate_bayesian_regression_dnn(X: np.ndarray, y: np.ndarray):
         X_train, X_test, y_train, y_test = train_test_split(X, y, train_size=0.9, test_size=0.1)
 
         # Create the train and test datasets
-        train_dataset = CustomDataset(X_train, y_train)
+        train_dataset = CustomDataset(torch.tensor(X_train, device=device), torch.tensor(y_train, device=device))
         train_loader = DataLoader(train_dataset, batch_size=64)
-        X_test = torch.tensor(X_test)
-        y_test = torch.tensor(y_test)
+        X_test = torch.tensor(X_test, device=device)
+        y_test = torch.tensor(y_test, device=device)
 
         # Set up the model
         net = WHVIRegression([
-            WHVILinear(8, 128),
+            WHVILinear(8, 128, device=device),
             nn.ReLU(),
-            WHVILinear(128, 128),
+            WHVILinear(128, 128, device=device),
             nn.ReLU(),
-            WHVILinear(128, 1)
+            WHVILinear(128, 1, device=device)
         ], eval_samples=64)
+        net = net.to(device=device)
 
         # Set up the optimizer
         optimizer = make_optimizer(net)

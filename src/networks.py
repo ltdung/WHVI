@@ -1,3 +1,4 @@
+import time
 from typing import Iterable, Tuple
 import math
 from tqdm import tqdm
@@ -77,10 +78,11 @@ class WHVIRegression(WHVINetwork):
         self.current_mnll = 0.0
 
     def mnll(self, y: torch.Tensor, y_hat: torch.Tensor, sigma: torch.Tensor):
-        sums_of_squares = torch.zeros((y_hat.size()[2],))
+        sums_of_squares = torch.zeros((y_hat.size()[2],), device=self.sigma.device)
         for j in range(len(sums_of_squares)):
             sums_of_squares[j] = torch.sum(torch.square(y - y_hat[..., j]))
-        return -torch.mean(len(y) * (self.log_rsqrt_2pi - torch.log(sigma)) - 1 / (2 * sigma ** 2) * sums_of_squares)
+        retval = -torch.mean(len(y) * (self.log_rsqrt_2pi - torch.log(sigma)) - 1 / (2 * sigma ** 2) * sums_of_squares)
+        return retval
 
     def loss(self, x: torch.Tensor, y: torch.Tensor, *args, **kwargs) -> torch.Tensor:
         """
