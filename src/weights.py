@@ -21,7 +21,7 @@ class WHVISquarePow2Matrix(nn.Module):
         self.s1_theta = nn.Parameter(torch.randn(D))
         self.s2_theta = nn.Parameter(torch.randn(D))
         self.g_mu = nn.Parameter(torch.zeros(D))
-        self.g_rho = nn.Parameter(torch.distributions.Uniform(-5, -4).sample((D,)))
+        self.g_rho = nn.Parameter(torch.rand(D) - 10)  # Initialization with Uniform(-10, -9)
         self.FWHT1 = FWHT()  # This is a module
         self.FWHT2 = FWHT()  # This is a module
 
