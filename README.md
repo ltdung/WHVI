@@ -44,3 +44,7 @@ y_test = torch.Tensor(...)  # Test targets
 # Evaluate the model on test data
 error, mnll = model.eval_model(X_test, y_test)
 ```
+
+## References
+* S. Rossi, S. Marmin, and M. Filippone (2019). [Walsh-Hadamard Variational Inference for Bayesian Deep Learning.](https://arxiv.org/abs/1905.11248) *arXiv preprint arXiv:1905.11248*.  
+* S. Rossi, S. Marmin, and M. Filippone (2019). \[Direct link\] [Supplementary material for "Walsh-Hadamard Variational Inference for Bayesian Deep Learning".](https://www.eurecom.fr/fr/publication/6398/download/data-publi-6398.pdf)
