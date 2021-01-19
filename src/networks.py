@@ -109,7 +109,9 @@ class WHVIRegression(WHVINetwork):
                 loss = self.loss(data_x, data_y, self.sigma)
                 loss.backward()
                 optimizer.step()
-                self.zero_grad()
+                t0 = time.time()
+                self.zero_grad(set_to_none=True)
+                print(time.time() - t0)
             if epoch % pbar_update_period == 0:
                 progress_bar.set_description(f'[Fix. var.] KL = {self.current_kl:.2f}, MNLL = {self.current_mnll:.2f}')
 
