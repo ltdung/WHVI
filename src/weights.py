@@ -17,9 +17,9 @@ class WHVISquarePow2Matrix(nn.Module):
         self.lambda_ = lambda_
         self.padding = 0  # For compatibility with the stacked version
 
-        self.bias = nn.Parameter(torch.zeros(D, 1)) if bias else None
-        self.s1 = nn.Parameter(torch.distributions.Bernoulli(torch.tensor([0.5])).sample((D,)) * 2 - 1)
-        self.s2 = nn.Parameter(torch.distributions.Bernoulli(torch.tensor([0.5])).sample((D,)) * 2 - 1)
+        self.bias = nn.Parameter(torch.zeros(1, D)) if bias else None
+        self.s1_theta = nn.Parameter(torch.randn(D))
+        self.s2_theta = nn.Parameter(torch.randn(D))
         self.g_mu = nn.Parameter(torch.zeros(D))
         self.g_rho = nn.Parameter(torch.distributions.Uniform(-5, -4).sample((D,)))
         self.FWHT1 = FWHT()  # This is a module
@@ -28,6 +28,14 @@ class WHVISquarePow2Matrix(nn.Module):
     @property
     def g_sigma_sqrt_diagonal(self):
         return F.softplus(self.g_rho)
+
+    @property
+    def s1(self):
+        return torch.round(torch.sigmoid(self.s1_theta)) * 2 - 1  # Create +-1 entries from real numbers.
+
+    @property
+    def s2(self):
+        return torch.round(torch.sigmoid(self.s2_theta)) * 2 - 1  # Create +-1 entries from real numbers.
 
     @property
     def kl(self):
@@ -75,7 +83,7 @@ class WHVIStackedMatrix(nn.Module):
         self.D_in, self.D_out, self.padding, self.stack = self.setup_dimensions(n_in, n_out)
         self.weight_matrices = nn.ModuleList(
             [WHVISquarePow2Matrix(self.D_in, device=device, lambda_=lambda_) for _ in range(self.stack)])
-        self.bias = nn.Parameter(torch.zeros(self.D_out, 1)) if bias else None
+        self.bias = nn.Parameter(torch.zeros(1, self.D_out)) if bias else None
 
     @staticmethod
     def setup_dimensions(D_in, D_out):
@@ -127,7 +135,7 @@ class WHVIColumnMatrix(nn.Module):
         self.D_adjusted = 2 ** math.ceil(math.log(n_out, 2))
         self.weight_submodule = WHVISquarePow2Matrix(self.D_adjusted, device=device, lambda_=lambda_)
         self.transposed = transposed
-        self.bias = nn.Parameter(torch.zeros(n_out, 1)) if bias else None
+        self.bias = nn.Parameter(torch.zeros(1, 1 if transposed else n_out)) if bias else None
 
     @property
     def kl(self):
