@@ -92,8 +92,7 @@ def evaluate_bayesian_regression_dnn(X: np.ndarray, y: np.ndarray):
         optimizer = make_optimizer(net)
 
         # Train the model
-        # net.train_model(train_loader, optimizer, epochs1=500, epochs2=50000)
-        net.train_model(train_loader, optimizer, epochs1=500, epochs2=500, pbar_update_period=1)
+        net.train_model(train_loader, optimizer, epochs1=500, epochs2=50000, pbar_update_period=1)
 
         # Evaluate the model on test data and store the result in lists
         error, mnll = net.eval_model(X_test, y_test)
@@ -119,6 +118,7 @@ if __name__ == '__main__':
     torch.manual_seed(0)
 
     # Concrete
+    print(f'Dataset: Concrete')
     df = pd.read_excel('../experiments/datasets/Concrete_Data.xls')
     X = df.values[:, :-1].astype(np.float32)
     y = df.values[:, -1].astype(np.float32).reshape(-1, 1)
