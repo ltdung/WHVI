@@ -15,7 +15,7 @@ class WHVISquarePow2Matrix(nn.Module):
         :param int D: number of rows/columns for the matrix. Must be a power of two.
         :param device: torch device.
         :param float lambda_: prior variance.
-        :param boolean bias: if True, include a bias in the linear computation.
+        :param boolean bias: if True, include a bias in the linear operation.
         """
         super().__init__()
         self.D = D
@@ -51,6 +51,12 @@ class WHVISquarePow2Matrix(nn.Module):
         return kl_diag_normal(self.g_mu, self.g_sigma, torch.zeros(self.D), torch.ones(self.D) * self.lambda_)
 
     def sample(self):
+        """
+        Sample a matrix W according to W = S1 @ H @ diag(g_tilde) @ H @ S2 with g_tilde drawn from the variational
+        posterior with mean g_mu and standard deviation g_sigma.
+
+        :return torch.Tensor: sampled matrix W.
+        """
         epsilon = torch.randn(self.D, device=self.device)
         g_tilde = self.g_mu + self.g_sigma * epsilon
         W = matmul_diag_left(self.s1, self.H @ matmul_diag_left(g_tilde, self.H @ torch.diag(self.s2)))
@@ -69,7 +75,9 @@ class WHVIStackedMatrix(nn.Module):
 
         :param n_in: number of input features.
         :param n_out: number of output features.
+        :param device: torch device.
         :param lambda_: prior variance.
+        :param boolean bias: if True, include a bias in the linear operation.
         """
         super().__init__()
 
@@ -112,13 +120,34 @@ class WHVIStackedMatrix(nn.Module):
 
     @property
     def kl(self):
+        """
+        KL divergence for this module.
+
+        :return torch.Tensor, scalar: KL divergence from the variational posterior to the prior.
+        """
         return sum(weight.kl for weight in self.weight_matrices)
 
     def sample(self):
+        """
+        Sample a weight matrix W by concatenating samples from matrix submodules.
+
+        :return torch.Tensor: sampled weight matrix.
+        """
         return torch.cat([weight.sample() for weight in self.weight_matrices])
 
     def forward(self, x):
-        # TODO pre-allocate this vector of zeros if possible
+        """
+        Perform the forward pass.
+        We pad the input x by zeros on the "right side" so that the length of the second dimension is self.D_in, then
+        multiply this vector by a sampled weight matrix.
+        We remove the elements, corresponding to the padded zeros after matrix multiplication. The length of the second
+        dimension of the output thus becomes self.n_out.
+
+        TODO pre-allocate x_padded (vector of zeros) if possible.
+
+        :param torch.Tensor x: inputs of size (batch_size, self.n_in).
+        :return torch.Tensor: outputs of size (batch_size, self.n_out).
+        """
         x_padded = torch.zeros((*x.size()[:-1], self.D_in), device=self.device)  # Add the extra zeros
         x_padded[..., :self.n_in] = x
         output = F.linear(x_padded, self.sample(), self.bias)
@@ -128,6 +157,18 @@ class WHVIStackedMatrix(nn.Module):
 
 class WHVIColumnMatrix(nn.Module):
     def __init__(self, n_out, device, lambda_=1e-5, bias=False, transposed=False):
+        """
+        WHVI column matrix.
+        Expects a single input feature and produces n_out output features.
+
+
+        :param int n_out: number of output features.
+        :param device: torch device.
+        :param float lambda_: prior variance.
+        :param boolean bias: if True, include a bias in the linear operation.
+        :param boolean transposed: if True, treat the matrix as transposed. This effectively turns it into a layer that
+                                   accepts multiple input features, but produces a single output feature.
+        """
         super().__init__()
         self.D = n_out
         self.D_adjusted = 2 ** math.ceil(math.log(n_out, 2))
@@ -137,9 +178,19 @@ class WHVIColumnMatrix(nn.Module):
 
     @property
     def kl(self):
+        """
+        KL divergence for this module.
+
+        :return torch.Tensor, scalar: KL divergence from the variational posterior to the prior.
+        """
         return self.weight_submodule.kl
 
     def sample(self):
+        """
+        Sample a weight matrix W by reshaping a sample from the weight submodule and taking its first self.D elements.
+
+        :return torch.Tensor: sampled weight matrix.
+        """
         matrix = torch.reshape(self.weight_submodule.sample(), (-1, 1))[:self.D]
         if self.transposed:
             return matrix.T
