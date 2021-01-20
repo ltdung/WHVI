@@ -84,27 +84,26 @@ class WHVIRegression(WHVINetwork):
         self.current_kl = 0.0
         self.current_mnll = 0.0
 
-    def mnll(self, y: torch.Tensor, y_hat: torch.Tensor, sigma: torch.Tensor):
+    def mnll(self, y: torch.Tensor, y_hat: torch.Tensor):
         """
         Compute the mean negative log likelihood.
         The likelihood is assumed to be independent normal, i.e. y_hat[i] ~ N(y[i], sigma).
 
         TODO check that the likelihood is correctly computed.
-        Argument y should have shape (n_observations, n_outputs), where n_observations represents the number of objects
-        that have been processed in this pass and n_outputs the output dimensionality of the network.
-        Argument y_hat should have shape (n_observations, n_outputs, n_mc_samples), where n_mc_samples represents the
-        number of Monte Carlo samples that have been drawn to estimate this mean.
+        Argument y should have shape (n_observations, n_outputs = 1), where n_observations represents the number of
+        objects that have been processed in this pass and n_outputs the output dimensionality of the network
+        (assumed 1). Argument y_hat should have shape (n_observations, n_outputs = 1, n_mc_samples), where n_mc_samples
+        represents the number of Monte Carlo samples that have been drawn to estimate this mean.
 
         :param torch.Tensor y: true target values.
         :param torch.Tensor y_hat: predicted target values.
-        :param torch.Tensor sigma: sigma parameter for the normal likelihood.
-        :return:
+        :return torch.Tensor, scalar: mean negative log likelihood.
         """
-        sums_of_squares = torch.zeros((y_hat.size()[2],), device=sigma.device)
-        for j in range(len(sums_of_squares)):
-            sums_of_squares[j] = torch.sum(torch.square(y - y_hat[..., j]))
-        retval = -torch.mean(len(y) * (self.log_rsqrt_2pi - torch.log(sigma)) - 1 / (2 * sigma ** 2) * sums_of_squares)
-        return retval
+        n_mc_samples = y_hat.size()[2]
+        nll_samples = torch.zeros(n_mc_samples, device=y.device)
+        for i in range(n_mc_samples):
+            nll_samples[i] = -torch.distributions.Normal(y_hat[..., i], self.sigma).log_prob(y).sum()
+        return torch.mean(nll_samples)
 
     def loss(self, x: torch.Tensor, y: torch.Tensor, ignore_kl=False, *args, **kwargs) -> torch.Tensor:
         """
@@ -116,7 +115,7 @@ class WHVIRegression(WHVINetwork):
         :param boolean ignore_kl: if True, calculate loss as just MNLL.
         :return torch.Tensor: ELBO value.
         """
-        self.current_mnll = self.mnll(y, self(x), self.sigma)
+        self.current_mnll = self.mnll(y, self(x))
         self.current_kl = sum([layer.kl for layer in self.modules() if isinstance(layer, WHVI)])
         return self.current_mnll + self.current_kl if not ignore_kl else self.current_mnll
 
@@ -175,7 +174,6 @@ class WHVIRegression(WHVINetwork):
         """
         self.eval()
         y_pred = self(X_test)
-        # TODO missing parameter sigma, but we use self.sigma anyway. Resolve (remove argument from declaration).
         test_mnll = self.mnll(y_test, y_pred)
         # kl = sum([layer.kl for layer in self.modules() if isinstance(layer, WHVI)])  # Unused
         test_error = F.mse_loss(y_pred.mean(dim=2), y_test)
