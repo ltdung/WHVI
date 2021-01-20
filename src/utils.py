@@ -2,15 +2,34 @@ import torch
 
 
 def matmul_diag_left(D_diagonal, A):
-    # Multiply D * A where D_diagonal is the main diagonal of a diagonal matrix D.
+    """
+    Perform (faster) matrix multiplication of D @ A where D_diagonal is the diagonal of a diagonal matrix D.
+
+    :param torch.Tensor D_diagonal: diagonal elements of D.
+    :param torch.Tensor A: input matrix.
+    :return: D @ A where D is a diagonal matrix with elements D_diagonal.
+    """
     return (D_diagonal * A.T).T
 
 
 def matmul_diag_right(A, D_diagonal):
+    """
+    Perform (faster) matrix multiplication of A @ D where D_diagonal is the diagonal of a diagonal matrix D.
+
+    :param torch.Tensor D_diagonal: diagonal elements of D.
+    :param torch.Tensor A: input matrix.
+    :return: A @ D where D is a diagonal matrix with elements D_diagonal.
+    """
     return A * D_diagonal
 
 
 def is_pow_of_2(x):
+    """
+    Check if x is a power of 2.
+
+    :param int x:
+    :return boolean: True if x is a power of 2, False otherwise.
+    """
     return x and (not (x & (x - 1)))
 
 
@@ -53,6 +72,13 @@ def kl_diag_normal(mu1: torch.Tensor, sd1: torch.Tensor, mu2: torch.Tensor, sd2:
 
 
 def build_H(D, device):
+    """
+    Compute the Walsh-Hadamard matrix of size (D, D).
+
+    :param int D: number of rows/columns of matrix H. Must be a power of two.
+    :param device: torch device.
+    :return: Walsh-Hadamard matrix of size (D, D).
+    """
     assert is_pow_of_2(D)
     H = build_H_recursive(D)
     H = H.to(device)
@@ -60,6 +86,12 @@ def build_H(D, device):
 
 
 def build_H_recursive(D):
+    """
+    Helper function that computes the Walsh-Hadamard matrix recursively by a divide-and-conquer approach.
+
+    :param int D: number of rows/columns of matrix H. Must be a power of two.
+    :return: Walsh-Hadamard matrix of size (D, D).
+    """
     if D == 1:
         return torch.tensor([[1.0]])
     submatrix = build_H_recursive(D // 2)  # Division by 2

@@ -26,6 +26,12 @@ def make_optimizer(net, gamma=0.0005, p=0.3, lambda0=0.001):
 
 class CustomDataset(Dataset):
     def __init__(self, x, y):
+        """
+        Class that holds data and targets.
+
+        :param torch.Tensor x: data of shape (n_samples, n_features).
+        :param torch.Tensor y: targets of shape (n_samples, n_outputs).
+        """
         self.x = x
         self.y = y
 
@@ -69,6 +75,8 @@ def evaluate_bayesian_regression_dnn(X: np.ndarray, y: np.ndarray):
     # device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     device = torch.device('cpu')
     print(device)
+
+    # TODO standardize columns of X
 
     for index in range(8):
         print(f'Iteration {index + 1}/8')

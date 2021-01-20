@@ -15,6 +15,10 @@ class WHVINetwork(nn.Sequential):
         Sequential neural network which supports WHVI layers.
         The output should be a vector.
 
+        :param Iterable[nn.Module] modules: iterable of torch modules to be passed to an underlying nn.Sequential
+                                            object.
+        :param loss_function: torch loss function to be used in training. This will be replaced in the future by an
+                              explicit likelihood.
         :param int train_samples: number of Monte Carlo samples to draw during training.
         :param int eval_samples: number of Monte Carlo samples to draw during evaluation.
         """
@@ -65,13 +69,38 @@ class WHVIRegression(WHVINetwork):
     log_rsqrt_2pi = math.log(1 / math.sqrt(2 * math.pi))
 
     def __init__(self, modules: Iterable[nn.Module], sigma=1.0, **kwargs):
+        """
+        WHVI neural network for regression.
+        Assumes a normal likelihood for the data.
+        Currently tested only for scalar regression targets.
+
+        TODO consider good initializations for sigma.
+
+        :param modules: iterable of nn.Module objects to be passed to an underlying nn.Sequential object.
+        :param sigma: initial error tolerance.
+        """
         super().__init__(modules, **kwargs)
         self.sigma = nn.Parameter(torch.tensor(sigma))
         self.current_kl = 0.0
         self.current_mnll = 0.0
 
     def mnll(self, y: torch.Tensor, y_hat: torch.Tensor, sigma: torch.Tensor):
-        sums_of_squares = torch.zeros((y_hat.size()[2],), device=self.sigma.device)
+        """
+        Compute the mean negative log likelihood.
+        The likelihood is assumed to be independent normal, i.e. y_hat[i] ~ N(y[i], sigma).
+
+        TODO check that the likelihood is correctly computed.
+        Argument y should have shape (n_observations, n_outputs), where n_observations represents the number of objects
+        that have been processed in this pass and n_outputs the output dimensionality of the network.
+        Argument y_hat should have shape (n_observations, n_outputs, n_mc_samples), where n_mc_samples represents the
+        number of Monte Carlo samples that have been drawn to estimate this mean.
+
+        :param torch.Tensor y: true target values.
+        :param torch.Tensor y_hat: predicted target values.
+        :param torch.Tensor sigma: sigma parameter for the normal likelihood.
+        :return:
+        """
+        sums_of_squares = torch.zeros((y_hat.size()[2],), device=sigma.device)
         for j in range(len(sums_of_squares)):
             sums_of_squares[j] = torch.sum(torch.square(y - y_hat[..., j]))
         retval = -torch.mean(len(y) * (self.log_rsqrt_2pi - torch.log(sigma)) - 1 / (2 * sigma ** 2) * sums_of_squares)
@@ -79,8 +108,8 @@ class WHVIRegression(WHVINetwork):
 
     def loss(self, x: torch.Tensor, y: torch.Tensor, ignore_kl=False, *args, **kwargs) -> torch.Tensor:
         """
-        Compute ELBO given inputs x and target y.
-        The likelihood is assumed to be according to the argument sigma.
+        Compute ELBO given inputs x and targets y.
+        The likelihood is assumed to be independent normal with variance sigma.
 
         :param torch.Tensor x: network input of shape (batch_size, in_dim).
         :param torch.Tensor y: network target of shape (batch_size, out_dim).
@@ -93,6 +122,16 @@ class WHVIRegression(WHVINetwork):
 
     def train_model(self, data_loader, optimizer, epochs1: int = 500, epochs2: int = 50000, pbar_update_period=20,
                     ignore_kl=False):
+        """
+        Train the model according to the procedure, described in the original paper.
+
+        :param torch.utils.data.DataLoader data_loader: torch DataLoader object with training data.
+        :param optimizer: torch optimizer.
+        :param int epochs1: number of epochs to train for with fixed variance.
+        :param int epochs2: number of epochs to train for with optimized variance.
+        :param int pbar_update_period: the number of epochs as a period when the tqdm progress bar should be updated.
+        :param boolean ignore_kl: if True, compute loss with only the MNLL term. Otherwise, include the KL term as well.
+        """
         self.train()
         self.sigma.requires_grad = False  # Do not optimize sigma
         progress_bar = tqdm(
@@ -124,8 +163,16 @@ class WHVIRegression(WHVINetwork):
         self.eval()
 
     def eval_model(self, X_test: torch.Tensor, y_test: torch.Tensor) -> Tuple[float, float]:
+        """
+        Evaluate the model on test data. Compute test error (MSE loss) and MNLL.
+
+        :param torch.Tensor X_test: test data.
+        :param torch.Tensor y_test: test targets.
+        :return tuple: MSE loss and MNLL.
+        """
         self.eval()
         y_pred = self(X_test)
+        # TODO missing parameter sigma, but we use self.sigma anyway. Resolve (remove argument from declaration).
         test_mnll = self.mnll(y_test, y_pred)
         # kl = sum([layer.kl for layer in self.modules() if isinstance(layer, WHVI)])  # Unused
         test_error = F.mse_loss(y_pred.mean(dim=2), y_test)
