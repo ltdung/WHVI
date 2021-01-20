@@ -17,9 +17,12 @@ class WHVILinear(nn.Module, WHVI):
         """
         WHVI feed forward layer.
 
-        :param n_in: input dimensionality.
-        :param n_out: output dimensionality.
-        :param lambda_: prior variance.
+        :param int n_in: input dimensionality.
+        :param int n_out: output dimensionality.
+        :param device: torch device.
+        :param float lambda_: prior variance.
+        :param boolean bias: if True, add a bias column after the linear operation in forward(x). This bias column is
+                             optimized (not treated variationally).
         """
         super().__init__()
         if n_in == 1:
@@ -33,6 +36,7 @@ class WHVILinear(nn.Module, WHVI):
 
     @property
     def kl(self):
+        """KL divergence from the variational posterior to the prior"""
         return self.weight_submodule.kl
 
     def forward(self, x):

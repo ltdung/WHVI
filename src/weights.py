@@ -9,6 +9,14 @@ from fwht.cpp.fwht import FWHT
 
 class WHVISquarePow2Matrix(nn.Module):
     def __init__(self, D, device, lambda_=1e-5, bias=False):
+        """
+        Create a square WHVI matrix of size (D, D) where D is a power of 2.
+
+        :param int D: number of rows/columns for the matrix. Must be a power of two.
+        :param device: torch device.
+        :param float lambda_: prior variance.
+        :param boolean bias: if True, include a bias in the linear computation.
+        """
         super().__init__()
         self.D = D
         self.H = build_H(D, device=device)
@@ -26,11 +34,20 @@ class WHVISquarePow2Matrix(nn.Module):
 
     @property
     def g_sigma(self):
-        # Square roots of the covariance matrix for g (i.e. standard deviations of univariate Normal distributions).
+        """
+        Square roots of the covariance matrix for g (i.e. standard deviations of univariate Normal distributions).
+        These are parameterized by g_sigma = softplus(g_rho) or equivalently g_sigma = 1 + log(1 + g_rho) to ensure
+        non-negative values.
+        """
         return F.softplus(self.g_rho)
 
     @property
     def kl(self):
+        """
+        KL divergence from the variational posterior to the prior.
+        The prior is a multivariate normal distribution with mean vector zero and diagonal covariance with all elements
+        being equal to self.lambda_.
+        """
         return kl_diag_normal(self.g_mu, self.g_sigma, torch.zeros(self.D), torch.ones(self.D) * self.lambda_)
 
     def sample(self):
