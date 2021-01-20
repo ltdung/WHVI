@@ -6,7 +6,7 @@ This code is a work-in-progress and is unfinished as of the latest update (2021/
 The repository is organized as follows:
 * `src` contains the source code for WHVI layers, neural network examples which use the layers, utility functions for fast matrix operations and for the fast Walsh-Hadamard transform (FWHT);
 * `test` contains unit tests for manually implemented functions;
-* `speed_benchmarks` contains speed tests for manually implemented functions;
+* `benchmarks` contains speed tests for manually implemented functions;
 * `experiments` contains reproductions of the experiments from the original paper. 
 
 ## Example

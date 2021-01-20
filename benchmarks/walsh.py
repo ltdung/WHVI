@@ -1,4 +1,4 @@
-from speed_benchmarks.classes import Benchmark, st_time
+from benchmarks.classes import Benchmark, st_time
 import torch
 from src.utils import build_H
 from src.fwht.cpp.fwht import FWHTFunction
