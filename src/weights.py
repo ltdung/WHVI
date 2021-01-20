@@ -3,8 +3,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from utils import matmul_diag_left
-from walsh import build_H
+from utils import matmul_diag_left, kl_diag_normal, build_H
 from fwht.cpp.fwht import FWHT
 
 
@@ -26,7 +25,8 @@ class WHVISquarePow2Matrix(nn.Module):
         self.FWHT2 = FWHT()  # This is a module
 
     @property
-    def g_sigma_sqrt_diagonal(self):
+    def g_sigma(self):
+        # Square roots of the covariance matrix for g (i.e. standard deviations of univariate Normal distributions).
         return F.softplus(self.g_rho)
 
     @property
@@ -41,20 +41,21 @@ class WHVISquarePow2Matrix(nn.Module):
     def kl(self):
         # KL divergence from the posterior to the prior, but the prior has zero mean and fully factorized covariance
         # lambda_ * Identity with scalar lambda_.
-        kl = 0.5 * (
-                self.D * math.log(self.lambda_)
-                - torch.sum(2 * torch.log(self.g_sigma_sqrt_diagonal))
-                - self.D
-                + torch.sum(self.g_sigma_sqrt_diagonal ** 2 / self.lambda_)
-                + torch.dot(self.g_mu, self.g_mu) / self.lambda_
-        )
+        # kl = 0.5 * (
+        #         self.D * math.log(self.lambda_)
+        #         - torch.sum(2 * torch.log(self.g_sigma_sqrt_diagonal))
+        #         - self.D
+        #         + torch.sum(self.g_sigma_sqrt_diagonal ** 2 / self.lambda_)
+        #         + torch.dot(self.g_mu, self.g_mu) / self.lambda_
+        # )
+        kl = kl_diag_normal(self.g_mu, self.g_sigma, torch.zeros(self.D), torch.ones(self.D) * self.lambda_)
         return kl
 
     def sample(self):
         epsilon = torch.randn(self.D, device=self.device)
         HS2 = self.H * self.s2
         mu_term = matmul_diag_left(self.s1, self.H @ (matmul_diag_left(self.g_mu, HS2)))
-        sigma_term = matmul_diag_left(self.s1, self.H @ (matmul_diag_left(self.g_sigma_sqrt_diagonal * epsilon, HS2)))
+        sigma_term = matmul_diag_left(self.s1, self.H @ (matmul_diag_left(self.g_sigma * epsilon, HS2)))
         W = mu_term + sigma_term
         return W
 

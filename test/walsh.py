@@ -1,6 +1,6 @@
 import unittest
 import torch
-from src.walsh import build_H, FWHT
+from src.utils import build_H
 
 
 class WalshHadamard(unittest.TestCase):
