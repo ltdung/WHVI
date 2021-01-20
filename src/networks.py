@@ -17,12 +17,6 @@ class WHVINetwork(nn.Sequential):
 
         :param int train_samples: number of Monte Carlo samples to draw during training.
         :param int eval_samples: number of Monte Carlo samples to draw during evaluation.
-
-
-        Example:
-        >>> modules = [nn.Linear(28 * 28, 128), nn.ReLU(), WHVILinear(128), nn.ReLU(), nn.Linear(128, 10)]
-        >>> net = WHVINetwork(modules)
-        >>> net(torch.randn(100, 64))
         """
         super().__init__(*modules)
         self.train_samples = train_samples
