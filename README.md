@@ -4,7 +4,7 @@ Reproduction of the paper [Walsh-Hadamard Variational Inference for Bayesian Dee
 This code is a work-in-progress and is unfinished as of the latest update (2021/01/20).
 
 The repository is organized as follows:
-* `src` contains the source code for WHVI layers, neural network examples which use the layers, utility functions for fast matrix operations and for the fast Walsh-Hadamard transform (FWHT);
+* `src` contains the source code for the core WHVI functionality;
 * `test` contains unit tests for manually implemented functions;
 * `benchmarks` contains speed tests for manually implemented functions;
 * `experiments` contains reproductions of the experiments from the original paper. 
