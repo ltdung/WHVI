@@ -11,7 +11,7 @@ The repository is organized as follows:
 
 ## Example
 The snippet below illustrates the use of a feed-forward regression network that uses WHVI layers.
-It is possible to add standard layers like `nn.Linear` seamlessly.
+It also is possible to seamlessly add standard modules like `nn.Linear` layers.
 
 ```python
 import torch
@@ -44,6 +44,8 @@ y_test = torch.Tensor(...)  # Test targets
 # Evaluate the model on test data
 error, mnll = model.eval_model(x_test, y_test)
 ```
+
+See the [Toy example](./experiments/Toy%20example.ipynb) notebook for additional information.
 
 ## References
 * S. Rossi, S. Marmin, and M. Filippone (2019). [Walsh-Hadamard Variational Inference for Bayesian Deep Learning.](https://arxiv.org/abs/1905.11248) *arXiv preprint arXiv:1905.11248*.  
