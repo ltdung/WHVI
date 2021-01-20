@@ -1,5 +1,4 @@
 #include <torch/extension.h>
-#include <stdio.h>
 
 torch::Tensor fwht(torch::Tensor x_in) {
     torch::Tensor x = torch::clone(x_in);  // NOT IN PLACE! If we skip this line, then autograd gets messed up. FIXME.
@@ -17,9 +16,6 @@ torch::Tensor fwht(torch::Tensor x_in) {
         h *= 2;
     }
     x = x.transpose(0, 1);  // Flip back
-    std::cout << x[0] << std::endl;
-    std::cout << x_in[0] << std::endl;
-    std::cout << "Hello world" << std::endl;
     return x;
 }
 
