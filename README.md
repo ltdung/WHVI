@@ -33,11 +33,11 @@ model = WHVIRegression([
 ])
 model = model.to(device=device)
 optimizer = optim.Adam(model.parameters(), lr=0.001)
-lr_scheduler = optim.lr_scheduler.LambdaLR(optimizer, lambda t: 0.001 * ((1 + 0.0005 * t) ** (-0.3)))
+scheduler = optim.lr_scheduler.LambdaLR(optimizer, lambda t: (1 + 0.0005 * t) ** (-0.3))
 
 # Set up the data
 train_loader = DataLoader(...)  # Create your train dataset loader here
-model.train_model(train_loader, optimizer)
+model.train_model(train_loader, optimizer, scheduler)
 X_test = torch.Tensor(...)  # Test data
 y_test = torch.Tensor(...)  # Test targets
 
