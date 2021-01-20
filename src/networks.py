@@ -120,13 +120,14 @@ class WHVIRegression(WHVINetwork):
         self.current_kl = sum([layer.kl for layer in self.modules() if isinstance(layer, WHVI)])
         return self.current_mnll + self.current_kl if not ignore_kl else self.current_mnll
 
-    def train_model(self, data_loader, optimizer, epochs1: int = 500, epochs2: int = 50000, pbar_update_period=20,
+    def train_model(self, data_loader, optimizer, scheduler, epochs1: int = 500, epochs2: int = 50000, pbar_update_period=20,
                     ignore_kl=False):
         """
         Train the model according to the procedure, described in the original paper.
 
         :param torch.utils.data.DataLoader data_loader: torch DataLoader object with training data.
         :param optimizer: torch optimizer.
+        :param scheduler: torch learning rate scheduler.
         :param int epochs1: number of epochs to train for with fixed variance.
         :param int epochs2: number of epochs to train for with optimized variance.
         :param int pbar_update_period: the number of epochs as a period when the tqdm progress bar should be updated.
@@ -143,6 +144,7 @@ class WHVIRegression(WHVINetwork):
                 loss = self.loss(data_x, data_y, ignore_kl=ignore_kl)
                 loss.backward()
                 optimizer.step()
+                scheduler.step()
                 self.zero_grad(set_to_none=True)
             if epoch % pbar_update_period == 0:
                 progress_bar.set_description(f'[Fix. var.] KL = {self.current_kl:.2f}, MNLL = {self.current_mnll:.2f}')
@@ -157,6 +159,7 @@ class WHVIRegression(WHVINetwork):
                 loss = self.loss(data_x, data_y, ignore_kl=ignore_kl)
                 loss.backward()
                 optimizer.step()
+                scheduler.step()
                 self.zero_grad()
             if epoch % pbar_update_period == 0:
                 progress_bar.set_description(f'[Opt. var.] KL = {self.current_kl:.2f}, MNLL = {self.current_mnll:.2f}')

@@ -53,7 +53,7 @@ class WHVISquarePow2Matrix(nn.Module):
     def sample(self):
         epsilon = torch.randn(self.D, device=self.device)
         g_tilde = self.g_mu + self.g_sigma * epsilon
-        W = matmul_diag_left(self.s1) * self.H @ matmul_diag_left(g_tilde, H @ torch.diag(self.s2))
+        W = matmul_diag_left(self.s1, self.H @ matmul_diag_left(g_tilde, self.H @ torch.diag(self.s2)))
         return W
 
     def forward(self, x):

@@ -17,11 +17,11 @@ def make_optimizer(net, gamma=0.0005, p=0.3, lambda0=0.001):
     :param gamma: decay parameter.
     :param p: decay parameter.
     :param lambda0: learning rate.
-    :return: optimizer object.
+    :return tuple: optimizer and scheduler object object.
     """
     optimizer = optim.Adam(net.parameters(), lr=lambda0)
-    optim.lr_scheduler.LambdaLR(optimizer, lambda t: lambda0 * ((1 + gamma * t) ** (-p)))  # Set the learning rate decay
-    return optimizer
+    scheduler = optim.lr_scheduler.LambdaLR(optimizer, lambda t: lambda0 * ((1 + gamma * t) ** (-p)))  # Set the learning rate decay
+    return optimizer, scheduler
 
 
 class CustomDataset(Dataset):
@@ -100,11 +100,11 @@ def evaluate_bayesian_regression_dnn(X: np.ndarray, y: np.ndarray):
         ], eval_samples=64)
         net = net.to(device=device)
 
-        # Set up the optimizer
-        optimizer = make_optimizer(net)
+        # Set up the optimizer and learning rate scheduler
+        optimizer, scheduler = make_optimizer(net)
 
         # Train the model
-        net.train_model(train_loader, optimizer, epochs1=500, epochs2=50000, pbar_update_period=1)
+        net.train_model(train_loader, optimizer, scheduler, epochs1=500, epochs2=50000, pbar_update_period=1)
 
         # Evaluate the model on test data and store the result in lists
         error, mnll = net.eval_model(X_test, y_test)
