@@ -9,18 +9,18 @@ from layers import WHVILinear
 from networks import WHVIRegression
 
 
-def make_optimizer(net, gamma=0.0005, p=0.3, lr=1e-3):
+def make_optimizer(net, gamma=0.0005, p=0.3, lambda0=0.001):
     """
     Configure the Adam optimizer as used in the experiments.
 
     :param net: target model.
     :param gamma: decay parameter.
     :param p: decay parameter.
-    :param lr: learning rate.
+    :param lambda0: learning rate.
     :return: optimizer object.
     """
-    optimizer = optim.Adam(net.parameters(), lr=lr)
-    optim.lr_scheduler.LambdaLR(optimizer, lambda t: (1 + gamma * t) ** (-p))  # Set the learning rate decay
+    optimizer = optim.Adam(net.parameters(), lr=lambda0)
+    optim.lr_scheduler.LambdaLR(optimizer, lambda t: lambda0 * ((1 + gamma * t) ** (-p)))  # Set the learning rate decay
     return optimizer
 
 

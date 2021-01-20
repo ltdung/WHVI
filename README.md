@@ -32,8 +32,8 @@ model = WHVIRegression([
     WHVILinear(128, 1, device=device)
 ])
 model = model.to(device=device)
-optimizer = optim.Adam(model.parameters(), lr=1e-3)
-optim.lr_scheduler.LambdaLR(optimizer, lambda t: (1 + 0.0005 * t) ** (-0.3))
+optimizer = optim.Adam(model.parameters(), lr=0.001)
+lr_scheduler = optim.lr_scheduler.LambdaLR(optimizer, lambda t: 0.001 * ((1 + 0.0005 * t) ** (-0.3)))
 
 # Set up the data
 train_loader = DataLoader(...)  # Create your train dataset loader here
