@@ -17,8 +17,8 @@ class WHVISquarePow2Matrix(nn.Module):
         self.padding = 0  # For compatibility with the stacked version
 
         self.bias = nn.Parameter(torch.zeros(1, D)) if bias else None
-        self.s1_theta = nn.Parameter(torch.randn(D))
-        self.s2_theta = nn.Parameter(torch.randn(D))
+        self.s1 = nn.Parameter(torch.randn(D))
+        self.s2 = nn.Parameter(torch.randn(D))
         self.g_mu = nn.Parameter(torch.zeros(D))
         self.g_rho = nn.Parameter(torch.rand(D) - 10)  # Initialization with Uniform(-10, -9)
         self.FWHT1 = FWHT()  # This is a module
@@ -30,26 +30,8 @@ class WHVISquarePow2Matrix(nn.Module):
         return F.softplus(self.g_rho)
 
     @property
-    def s1(self):
-        return torch.round(torch.sigmoid(self.s1_theta)) * 2 - 1  # Create +-1 entries from real numbers.
-
-    @property
-    def s2(self):
-        return torch.round(torch.sigmoid(self.s2_theta)) * 2 - 1  # Create +-1 entries from real numbers.
-
-    @property
     def kl(self):
-        # KL divergence from the posterior to the prior, but the prior has zero mean and fully factorized covariance
-        # lambda_ * Identity with scalar lambda_.
-        # kl = 0.5 * (
-        #         self.D * math.log(self.lambda_)
-        #         - torch.sum(2 * torch.log(self.g_sigma_sqrt_diagonal))
-        #         - self.D
-        #         + torch.sum(self.g_sigma_sqrt_diagonal ** 2 / self.lambda_)
-        #         + torch.dot(self.g_mu, self.g_mu) / self.lambda_
-        # )
-        kl = kl_diag_normal(self.g_mu, self.g_sigma, torch.zeros(self.D), torch.ones(self.D) * self.lambda_)
-        return kl
+        return kl_diag_normal(self.g_mu, self.g_sigma, torch.zeros(self.D), torch.ones(self.D) * self.lambda_)
 
     def sample(self):
         epsilon = torch.randn(self.D, device=self.device)
