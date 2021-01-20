@@ -47,6 +47,16 @@ error, mnll = model.eval_model(x_test, y_test)
 
 See the [Toy example](./experiments/Toy%20example.ipynb) notebook for additional information.
 
+## Setup instructions
+Type the following instructions into an appropriate terminal:
+```
+conda env create -f environment.yml  # Configure the main environment
+cd src/fwht/cpp && python setup.py install || cd ../../..  # Compile C++ FWHT functions
+```
+The main dependency is PyTorch.
+We use Sklearn and Numpy for to evaluate models on standard datasets.
+We show progress bars during model training using tqdm.
+
 ## References
 * S. Rossi, S. Marmin, and M. Filippone (2019). [Walsh-Hadamard Variational Inference for Bayesian Deep Learning.](https://arxiv.org/abs/1905.11248) *arXiv preprint arXiv:1905.11248*.  
 * S. Rossi, S. Marmin, and M. Filippone (2019). \[Direct link\] [Supplementary material for "Walsh-Hadamard Variational Inference for Bayesian Deep Learning".](https://www.eurecom.fr/fr/publication/6398/download/data-publi-6398.pdf)

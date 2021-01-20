@@ -2,7 +2,9 @@ import unittest
 
 import torch
 import torch.nn as nn
-from src.networks import WHVILinear, WHVIRegression
+
+from layers import WHVILinear
+from src.networks import WHVIRegression
 
 
 class RegressionTestCase(unittest.TestCase):
