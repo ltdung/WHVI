@@ -6,25 +6,53 @@
 
 % Packages
 \usepackage{amsmath}
+\usepackage{amsfonts}
 \author{David Nabergoj}
 \title{Reproducibility report: Walsh-Hadamard Variational Inference for Bayesian Deep Learning}
 
 % Document
 \begin{document}
     \maketitle
-    
-    \section{Brief review of the paper}\label{sec:brief-review-of-the-paper}
-    % TODO describe key contributions of the original paper (introduction)
+
+
+    \section{Introduction}\label{sec:introduction}
+    In this report, we assess the reproducibility of the paper ``Walsh-Hadamard Variational Inference for Bayesian Deep Learning''~\cite{rossi2019walsh}.
+    We review the key contributions of the paper in Section~\ref{sec:brief-review-of-the-paper}.
+    We state the most important findings to be reproduced and describe our approach to reproduce them in Section~\ref{sec:reproducibility-goals}.
+    We describe the implementation details in Section~\ref{sec:implementation-details} and compare our empirical results to those in the original paper in Section~\ref{sec:running-the-experiments}.
+    Finally, we conclude the report with an overall reproducibility assessment and discuss the clarity of the paper in Section~\ref{sec:conclusion-and-discussion}.
+
+    Disclaimer: the author of this report was not an expert in the fields of variational inference or random matrix theory at the time of writing.
+    The major results of this report are based on multiple readings of the original paper~\cite{rossi2019walsh} and re-runs of the described experiments, as well as brief reading of some key referenced literature~\cite{le2014fastfood, blundell2015weight, fino1976unified, kingma2015variational}.
+
+    \section{Brief review of the original paper}\label{sec:brief-review-of-the-paper}
+    The authors propose Walsh-Hadamard Variational Inference (WHVI), where weight matrices in Bayesian neural networks are efficiently re-parameterized to allow for linear space complexity and log-linear time complexity at prediction time.
+    The key idea is that weight matrices can be efficiently sampled by
+    $$
+    \widetilde{\mathbf{W}} = \mathbf{S_1} \mathbf{H} \mathrm{diag}(\widetilde{\mathbf{g}}) \mathbf{H} \mathbf{S_2}, \widetilde{\mathbf{g}} \sim q(\mathbf{g})
+    $$.
+    Here, $\widetilde{\mathbf{W}}$ is a sample of the weight matrix, $\mathbf{S_1}$ and $\mathbf{S_2}$ are deterministic diagonal matrices whose entries need to be optimized, $\mathbf{H}$ is the Walsh-Hadamard matrix\footnote{It is not explicitly stated whether this matrix should be orthonormal}, and $\widetilde{\mathbf{g}}$ is a sample from the distribution $q$.
+    The variational posterior distribution $q$ is a multivariate normal distribution with a diagonal covariance matrix, i.e.\ $q(\mathbf{g}) = \mathcal{N}(\mathbf{mu}, \mathbf{Sigma})$.
+
+    This approach offers an advantage over other approaches like Mean field Gaussian variational inference, because it requires $O(D)$ instead of $O(D^2)$ parameters to represent weight matrices of size $D \times D$.
+    Furthermore, the matrix-vector product $\mathbf{H}\mathbf{x}$ can be computed in $O(D \logD)$ time and $O(1)$ space using the in-place version of the Fast Walsh-Hadamard transform.
+    The described approach supports matrices of size $D \times D$ where $D = 2^p$ for some $p > 0$ in its most basic form, however it is extended to support matrices of arbitrary size by concatenating smaller square matrices.
+
+    WHVI is applied to a toy example, several regression and classification data sets, and is also tested on image classification tasks using Bayesian convolutional neural networks.
+
 
     \section{Reproducibility goals and methodology}\label{sec:reproducibility-goals}
     % TODO describe the sought findings that need to be inspected and how are we going to do it (methods)
 
+
     \section{Implementation details}\label{sec:implementation-details}
     % TODO describe how the models and algorithms were implemented (methods)
-    
+
+
     \section{Running the experiments}\label{sec:running-the-experiments}
     % TODO describe the details of how the experiments were run
-    
+
+
     \section{Conclusion and discussion}\label{sec:conclusion-and-discussion}
     % TODO conclude with key findings regarding the reproducibility, discuss own results and authors' results.
 
