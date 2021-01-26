@@ -1,174 +1,171 @@
-#include <torch/extension.h>
+/* Adated from the CUDA samples https://docs.nvidia.com/cuda/cuda-samples/index.html.
+   Changed from "natural order" Hadamard transform (larger strides before
+   smaller strides) to the standard Hadamard transform (smaller strides before
+   larger strides).
+ */
 
-#include <cuda.h>
-#include <cuda_runtime.h>
+/*
+ * Copyright 1993-2015 NVIDIA Corporation.  All rights reserved.
+ *
+ * Please refer to the NVIDIA end user license agreement (EULA) associated
+ * with this source code for terms and conditions that govern your use of
+ * this software. Any use, reproduction, disclosure, or distribution of
+ * this software and related documentation outside the terms of the EULA
+ * is strictly prohibited.
+ *
+ */
 
-#include <vector>
+#include <cooperative_groups.h>
 
-namespace {
-template <typename scalar_t>
-__device__ __forceinline__ scalar_t sigmoid(scalar_t z) {
-  return 1.0 / (1.0 + exp(-z));
+namespace cg = cooperative_groups;
+
+
+///////////////////////////////////////////////////////////////////////////////
+// Elementary(for vectors less than elementary size) in-shared memory
+// combined radix-2 + radix-4 Fast Walsh Transform
+///////////////////////////////////////////////////////////////////////////////
+#define ELEMENTARY_LOG2SIZE 11
+
+__global__ void fwtBatch1Kernel(float *d_Output, float *d_Input, int log2N)
+{
+    // Handle to thread block group
+    cg::thread_block cta = cg::this_thread_block();
+    const int    N = 1 << log2N;
+    const int base = blockIdx.x << log2N;
+
+    //(2 ** 11) * 4 bytes == 8KB -- maximum s_data[] size for G80
+    extern __shared__ float s_data[];
+    float *d_Src = d_Input  + base;
+    float *d_Dst = d_Output + base;
+
+    for (int pos = threadIdx.x; pos < N; pos += blockDim.x)
+    {
+        s_data[pos] = d_Src[pos];
+    }
+
+    int stride = 1;
+    //Do single radix-2 stage for odd power of two
+    if (log2N & 1)
+    {
+        cg::sync(cta);
+
+        for (int pos = threadIdx.x; pos < N / 2; pos += blockDim.x)
+        {
+            int i0 = pos << 1;
+            int i1 = i0 + 1;
+
+            float D0 = s_data[i0];
+            float D1 = s_data[i1];
+            s_data[i0] = D0 + D1;
+            s_data[i1] = D0 - D1;
+        }
+        stride <<= 1;
+    }
+
+    //Main radix-4 stages
+    const int pos = threadIdx.x;
+
+    for (; stride <= N >> 2; stride <<= 2)
+    {
+        int lo = pos & (stride - 1);
+        int i0 = ((pos - lo) << 2) + lo;
+        int i1 = i0 + stride;
+        int i2 = i1 + stride;
+        int i3 = i2 + stride;
+
+        cg::sync(cta);
+        float D0 = s_data[i0];
+        float D1 = s_data[i1];
+        float D2 = s_data[i2];
+        float D3 = s_data[i3];
+
+        float T;
+        T = D0;
+        D0         = D0 + D2;
+        D2         = T - D2;
+        T = D1;
+        D1         = D1 + D3;
+        D3         = T - D3;
+        T = D0;
+        s_data[i0] = D0 + D1;
+        s_data[i1] = T - D1;
+        T = D2;
+        s_data[i2] = D2 + D3;
+        s_data[i3] = T - D3;
+    }
+
+    cg::sync(cta);
+
+    for (int pos = threadIdx.x; pos < N; pos += blockDim.x)
+    {
+        d_Dst[pos] = s_data[pos];
+    }
 }
 
-template <typename scalar_t>
-__device__ __forceinline__ scalar_t d_sigmoid(scalar_t z) {
-  const auto s = sigmoid(z);
-  return (1.0 - s) * s;
+////////////////////////////////////////////////////////////////////////////////
+// Single in-global memory radix-4 Fast Walsh Transform pass
+// (for strides exceeding elementary vector size)
+////////////////////////////////////////////////////////////////////////////////
+__global__ void fwtBatch2Kernel(
+    float *d_Output,
+    float *d_Input,
+    int stride
+)
+{
+    const int pos = blockIdx.x * blockDim.x + threadIdx.x;
+    const int   N = blockDim.x *  gridDim.x * 4;
+
+    float *d_Src = d_Input  + blockIdx.y * N;
+    float *d_Dst = d_Output + blockIdx.y * N;
+
+    int lo = pos & (stride - 1);
+    int i0 = ((pos - lo) << 2) + lo;
+    int i1 = i0 + stride;
+    int i2 = i1 + stride;
+    int i3 = i2 + stride;
+
+    float D0 = d_Src[i0];
+    float D1 = d_Src[i1];
+    float D2 = d_Src[i2];
+    float D3 = d_Src[i3];
+
+    float T;
+    T = D0;
+    D0        = D0 + D2;
+    D2        = T - D2;
+    T = D1;
+    D1        = D1 + D3;
+    D3        = T - D3;
+    T = D0;
+    d_Dst[i0] = D0 + D1;
+    d_Dst[i1] = T - D1;
+    T = D2;
+    d_Dst[i2] = D2 + D3;
+    d_Dst[i3] = T - D3;
 }
 
-template <typename scalar_t>
-__device__ __forceinline__ scalar_t d_tanh(scalar_t z) {
-  const auto t = tanh(z);
-  return 1 - (t * t);
-}
+////////////////////////////////////////////////////////////////////////////////
+// Put everything together: batched Fast Walsh Transform CPU front-end
+////////////////////////////////////////////////////////////////////////////////
+void fwtBatchGPU(float *d_Data, int batchSize, int log2N)
+{
+    int nMixedRadixPasses = log2N > ELEMENTARY_LOG2SIZE ? ELEMENTARY_LOG2SIZE - (log2N - ELEMENTARY_LOG2SIZE) % 2 : log2N;
+    int N = 1 << nMixedRadixPasses;
+    int curBatchSize = batchSize << (log2N - nMixedRadixPasses);
 
-template <typename scalar_t>
-__device__ __forceinline__ scalar_t elu(scalar_t z, scalar_t alpha = 1.0) {
-  return fmaxf(0.0, z) + fminf(0.0, alpha * (exp(z) - 1.0));
-}
+    // (N + 3) / 4 to handle the case of N == 2
+    fwtBatch1Kernel<<<curBatchSize, (N + 3) / 4, N * sizeof(float)>>>(
+        d_Data,
+        d_Data,
+        nMixedRadixPasses
+    );
 
-template <typename scalar_t>
-__device__ __forceinline__ scalar_t d_elu(scalar_t z, scalar_t alpha = 1.0) {
-  const auto e = exp(z);
-  const auto d_relu = z < 0.0 ? 0.0 : 1.0;
-  return d_relu + (((alpha * (e - 1.0)) < 0.0) ? (alpha * e) : 0.0);
-}
+    const int THREAD_N = 256;
+    dim3 grid((1 << log2N) / (4 * THREAD_N), batchSize, 1);
 
-template <typename scalar_t>
-__global__ void lltm_cuda_forward_kernel(
-    const torch::PackedTensorAccessor<scalar_t,3,torch::RestrictPtrTraits,size_t> gates,
-    const torch::PackedTensorAccessor<scalar_t,2,torch::RestrictPtrTraits,size_t> old_cell,
-    torch::PackedTensorAccessor<scalar_t,2,torch::RestrictPtrTraits,size_t> new_h,
-    torch::PackedTensorAccessor<scalar_t,2,torch::RestrictPtrTraits,size_t> new_cell,
-    torch::PackedTensorAccessor<scalar_t,2,torch::RestrictPtrTraits,size_t> input_gate,
-    torch::PackedTensorAccessor<scalar_t,2,torch::RestrictPtrTraits,size_t> output_gate,
-    torch::PackedTensorAccessor<scalar_t,2,torch::RestrictPtrTraits,size_t> candidate_cell) {
-  //batch index
-  const int n = blockIdx.y;
-  // column index
-  const int c = blockIdx.x * blockDim.x + threadIdx.x;
-  if (c < gates.size(2)){
-    input_gate[n][c] = sigmoid(gates[n][0][c]);
-    output_gate[n][c] = sigmoid(gates[n][1][c]);
-    candidate_cell[n][c] = elu(gates[n][2][c]);
-    new_cell[n][c] =
-        old_cell[n][c] + candidate_cell[n][c] * input_gate[n][c];
-    new_h[n][c] = tanh(new_cell[n][c]) * output_gate[n][c];
-  }
-}
+    for (int logSize = nMixedRadixPasses + 2; logSize <= log2N; logSize += 2)
+    {
+        fwtBatch2Kernel<<<grid, THREAD_N>>>(d_Data, d_Data, (1 << logSize) / 4);
+    }
 
-template <typename scalar_t>
-__global__ void lltm_cuda_backward_kernel(
-    torch::PackedTensorAccessor<scalar_t,2,torch::RestrictPtrTraits,size_t> d_old_cell,
-    torch::PackedTensorAccessor<scalar_t,3,torch::RestrictPtrTraits,size_t> d_gates,
-    const torch::PackedTensorAccessor<scalar_t,2,torch::RestrictPtrTraits,size_t> grad_h,
-    const torch::PackedTensorAccessor<scalar_t,2,torch::RestrictPtrTraits,size_t> grad_cell,
-    const torch::PackedTensorAccessor<scalar_t,2,torch::RestrictPtrTraits,size_t> new_cell,
-    const torch::PackedTensorAccessor<scalar_t,2,torch::RestrictPtrTraits,size_t> input_gate,
-    const torch::PackedTensorAccessor<scalar_t,2,torch::RestrictPtrTraits,size_t> output_gate,
-    const torch::PackedTensorAccessor<scalar_t,2,torch::RestrictPtrTraits,size_t> candidate_cell,
-    const torch::PackedTensorAccessor<scalar_t,3,torch::RestrictPtrTraits,size_t> gate_weights) {
-  //batch index
-  const int n = blockIdx.y;
-  // column index
-  const int c = blockIdx.x * blockDim.x + threadIdx.x;
-  if (c < d_gates.size(2)){
-    const auto d_output_gate = tanh(new_cell[n][c]) * grad_h[n][c];
-    const auto d_tanh_new_cell = output_gate[n][c] * grad_h[n][c];
-    const auto d_new_cell =
-        d_tanh(new_cell[n][c]) * d_tanh_new_cell + grad_cell[n][c];
-
-
-    d_old_cell[n][c] = d_new_cell;
-    const auto d_candidate_cell = input_gate[n][c] * d_new_cell;
-    const auto d_input_gate = candidate_cell[n][c] * d_new_cell;
-
-    d_gates[n][0][c] =
-        d_input_gate * d_sigmoid(gate_weights[n][0][c]);
-    d_gates[n][1][c] =
-        d_output_gate * d_sigmoid(gate_weights[n][1][c]);
-    d_gates[n][2][c] =
-        d_candidate_cell * d_elu(gate_weights[n][2][c]);
-  }
-}
-} // namespace
-
-std::vector<torch::Tensor> lltm_cuda_forward(
-    torch::Tensor input,
-    torch::Tensor weights,
-    torch::Tensor bias,
-    torch::Tensor old_h,
-    torch::Tensor old_cell) {
-  auto X = torch::cat({old_h, input}, /*dim=*/1);
-  auto gate_weights = torch::addmm(bias, X, weights.transpose(0, 1));
-
-  const auto batch_size = old_cell.size(0);
-  const auto state_size = old_cell.size(1);
-
-  auto gates = gate_weights.reshape({batch_size, 3, state_size});
-  auto new_h = torch::zeros_like(old_cell);
-  auto new_cell = torch::zeros_like(old_cell);
-  auto input_gate = torch::zeros_like(old_cell);
-  auto output_gate = torch::zeros_like(old_cell);
-  auto candidate_cell = torch::zeros_like(old_cell);
-
-  const int threads = 1024;
-  const dim3 blocks((state_size + threads - 1) / threads, batch_size);
-
-  AT_DISPATCH_FLOATING_TYPES(gates.type(), "lltm_forward_cuda", ([&] {
-    lltm_cuda_forward_kernel<scalar_t><<<blocks, threads>>>(
-        gates.packed_accessor<scalar_t,3,torch::RestrictPtrTraits,size_t>(),
-        old_cell.packed_accessor<scalar_t,2,torch::RestrictPtrTraits,size_t>(),
-        new_h.packed_accessor<scalar_t,2,torch::RestrictPtrTraits,size_t>(),
-        new_cell.packed_accessor<scalar_t,2,torch::RestrictPtrTraits,size_t>(),
-        input_gate.packed_accessor<scalar_t,2,torch::RestrictPtrTraits,size_t>(),
-        output_gate.packed_accessor<scalar_t,2,torch::RestrictPtrTraits,size_t>(),
-        candidate_cell.packed_accessor<scalar_t,2,torch::RestrictPtrTraits,size_t>());
-  }));
-
-  return {new_h, new_cell, input_gate, output_gate, candidate_cell, X, gates};
-}
-
-std::vector<torch::Tensor> lltm_cuda_backward(
-    torch::Tensor grad_h,
-    torch::Tensor grad_cell,
-    torch::Tensor new_cell,
-    torch::Tensor input_gate,
-    torch::Tensor output_gate,
-    torch::Tensor candidate_cell,
-    torch::Tensor X,
-    torch::Tensor gates,
-    torch::Tensor weights) {
-  auto d_old_cell = torch::zeros_like(new_cell);
-  auto d_gates = torch::zeros_like(gates);
-
-  const auto batch_size = new_cell.size(0);
-  const auto state_size = new_cell.size(1);
-
-  const int threads = 1024;
-  const dim3 blocks((state_size + threads - 1) / threads, batch_size);
-
-  AT_DISPATCH_FLOATING_TYPES(X.type(), "lltm_forward_cuda", ([&] {
-    lltm_cuda_backward_kernel<scalar_t><<<blocks, threads>>>(
-        d_old_cell.packed_accessor<scalar_t,2,torch::RestrictPtrTraits,size_t>(),
-        d_gates.packed_accessor<scalar_t,3,torch::RestrictPtrTraits,size_t>(),
-        grad_h.packed_accessor<scalar_t,2,torch::RestrictPtrTraits,size_t>(),
-        grad_cell.packed_accessor<scalar_t,2,torch::RestrictPtrTraits,size_t>(),
-        new_cell.packed_accessor<scalar_t,2,torch::RestrictPtrTraits,size_t>(),
-        input_gate.packed_accessor<scalar_t,2,torch::RestrictPtrTraits,size_t>(),
-        output_gate.packed_accessor<scalar_t,2,torch::RestrictPtrTraits,size_t>(),
-        candidate_cell.packed_accessor<scalar_t,2,torch::RestrictPtrTraits,size_t>(),
-        gates.packed_accessor<scalar_t,3,torch::RestrictPtrTraits,size_t>());
-  }));
-
-  auto d_gate_weights = d_gates.flatten(1, 2);
-  auto d_weights = d_gate_weights.t().mm(X);
-  auto d_bias = d_gate_weights.sum(/*dim=*/0, /*keepdim=*/true);
-
-  auto d_X = d_gate_weights.mm(weights);
-  auto d_old_h = d_X.slice(/*dim=*/1, 0, state_size);
-  auto d_input = d_X.slice(/*dim=*/1, state_size);
-
-  return {d_old_h, d_input, d_weights, d_bias, d_old_cell, d_gates};
 }

@@ -4,7 +4,8 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 from utils import matmul_diag_left, kl_diag_normal, build_H
-from fwht.cpp.fwht import FWHT
+# from fwht.cuda.fwht import FWHTFunction
+# from fwht.cpp.fwht import FWHTFunction
 
 
 class WHVISquarePow2Matrix(nn.Module):
@@ -29,8 +30,6 @@ class WHVISquarePow2Matrix(nn.Module):
         self.s2 = nn.Parameter(torch.randn(D))
         self.g_mu = nn.Parameter(torch.zeros(D))
         self.g_rho = nn.Parameter(torch.rand(D) - 3)
-        self.FWHT1 = FWHT()  # This is a module
-        self.FWHT2 = FWHT()  # This is a module
 
     @property
     def g_sigma(self):
