@@ -28,7 +28,7 @@ class WHVISquarePow2Matrix(nn.Module):
         self.s1 = nn.Parameter(torch.randn(D))
         self.s2 = nn.Parameter(torch.randn(D))
         self.g_mu = nn.Parameter(torch.zeros(D))
-        self.g_rho = nn.Parameter(torch.rand(D) - 10)  # Initialization with Uniform(-10, -9)
+        self.g_rho = nn.Parameter(torch.rand(D) - 3)
         self.FWHT1 = FWHT()  # This is a module
         self.FWHT2 = FWHT()  # This is a module
 

@@ -49,8 +49,9 @@
     \end{center}
     }
 
-\author{David Nabergoj}
+% Title, author
 \title{Reproducibility report: Walsh-Hadamard Variational Inference for Bayesian Deep Learning}
+\author{David Nabergoj\thanks{University of Ljubljana, \href{mailto:david.nabergoj@student.uni-lj.si}{david.nabergoj@student.uni-lj.si}}}
 
 % Document
 \begin{document}
@@ -67,7 +68,7 @@
     The implementation of the proposed method, experiments and other files related to this report are available at \url{https://github.com/davidnabergoj/WHVI}.
 
     \begin{disclaimer}
-    the author of this report was not an expert in the fields of variational inference or random matrix theory at the time of writing.
+    the author of this report was not an expert in the related fields at the time of writing.
     The major results of this report are based on multiple readings of the original paper and its supplementary material~\cite{rossi2019walsh}, re-runs of the described experiments, as well as reading some key referenced literature~\cite{le2014fastfood, blundell2015weight, fino1976unified, kingma2015variational}.
     At the time of this study, there was no available code for the original paper, so all methods were implemented according to the literature listed above.
     \end{disclaimer}
@@ -114,8 +115,8 @@
     the authors do not state how they represent $\Sigma$.
     We chose the softplus transformation, because it was used in the seminal work on variational inference in neural networks~\cite{blundell2015weight}.
     The advantage is that we can optimize $\rho_i$ across the real line and disregard positivity constraints in the gradient-based optimization, then ensure non-negativity via a simple transformation.
+    We acknowledge that the referenced work uses softplus for individual elements of the weight matrix, whereas we use it for elements of vector $\mathbf{g}$, which is indirectly related to the weight matrix via Equation~\ref{eqn:weight-sampling}.
     \end{comment}
-
     To transform a batch of input vectors, a weight matrix is sampled from the posterior according to Equation~\ref{eqn:weight-sampling} and multiplied by the matrix of the batch. See Subsection~\ref{subsec:sampling-the-weight-matrix} for details.
 
     The \texttt{WHVIStackedMatrix} class represents matrices of arbitrary size.
@@ -128,14 +129,38 @@
     This method is recommended in the paper and indeed reduces the number of parameters from $O(D)$ to $O(\sqrt{D})$, while also reducing the single-vector transform time complexity from $O(D\log D)$ to $O(\sqrt{D}\log D)$.
     Note that by transposing the sampled matrix, this class can be used to map many inputs to a single output.
 
-    \subsection{Fast Walsh-Hadamard transform}
-    % Discuss performance of C++, pytorch, CUDA
+    Finally, we create a \texttt{WHVILinear} layer class, which automatically selects the appropriate matrix based on the desired input and output dimensionalities.
+    This is analogous to the traditional \texttt{Linear} layer in PyTorch, but also includes the computation of KL divergence $D_\mathrm{KL}\left(q(\mathbf{g}|\mu, \Sigma)\, ||\, p(\mathbf{g})\right)$ from the prior $p$ to the variational posterior $q$.
+    The KL divergence of a \texttt{WHVILinear} layer is the sum of KL divergence terms for all of its descendants of type \texttt{WHVIStackedMatrix}.
+    % See Subsection~\ref{subsec:computing-kl-divergence} for details.
 
-    \subsection{Initialization values}
+    \subsection{Fast Walsh-Hadamard transform}
+    An important contribution of the paper is the use of Fast Walsh-Hadamard transform (FWHT)~\cite{fino1976unified}, which allows for log-linear vector transformation time.
+    We implemented the transform in Python and C++, both implementations can be used on the CPU and the GPU.
+    \begin{comment}
+        the authors implemented a custom C++/CUDA kernel for a batched version of FWHT.
+        At the time of writing, our implementation does not include a such a kernel due to unfamiliarity with GPU programming.
+    \end{comment}
+    % TODO Discuss performance of C++, pytorch, CUDA
+
+    \subsection{Priors and parameter initializations}
+    According to the supplementary material for the original paper, we use a zero-mean prior with fully factorized covariance $\lambda \mathbf{I}$ for a particular layer, i.e. $\mathcal{N}(\mathbf{0}, \mathrm{diag}(\lambda, \dots, \lambda)$ for a chosen $\lambda > 0$.
+    \begin{comment}
+        we believe that the original paper should describe the choices of prior variances in more detail.
+        Currently, the supplement seems to suggest that a constant $\lambda = 10^{-5}$ was used in all layers of the deep Bayesian networks, but this is likely not the case.
+        Good choices of $\lambda$ are essential at each layer separately.
+        We have found that with such a small prior covariance, the predictions are typically just the mean.
+        However, by reconsidering the statement in the supplement, we may interpret it as putting a low prior covariance on the last layer and possibly higher ones on the previous layers.
+        This indeed substantially improves the results of the experiments.
+    \end{comment}
+    The authors did not describe the initialization of $\mathbf{S_1}$, $\mathbf{S_2}$, $\Sigma$.
+    We draw initial elements of $\mathbf{S_1}$ and $\mathbf{S_2}$ i.i.d.\ from a standard normal distribution and initial elements of $\rho$ i.i.d. from Uniform$(-3, -2)$.
+
+    % Likelihood sigma depends on the problem at hand. TODO describe when you do the regression/classification experiments.
 
     \subsection{Sampling the weight matrix}\label{subsec:sampling-the-weight-matrix}
+    % TODO matrix multiplication vs FWHT...
 
-    \subsection{Computing KL divergence}
 
     \section{Running the experiments}\label{sec:running-the-experiments}
     % TODO describe the details of how the experiments were run
