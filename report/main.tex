@@ -42,8 +42,20 @@
 
 
     \section{Reproducibility goals and methodology}\label{sec:reproducibility-goals}
-    % TODO describe the sought findings that need to be inspected and how are we going to do it (methods)
+    Our main goal is to implement all required procedures for WHVI and run the described experiments.
 
+    Firstly, we would like to see similar results for the toy univariate regression example section 3.1, Figure 4 of the original report.
+    This primarily means obtaining similar uncertainty estimates.
+    Next, we will focus on the regression and classification data sets, as listed in Table 3 of the original report.
+    We wish to obtain similar WHVI test error and WHVI test MNLL (mean negative log-likelihood) estimates, both the mean and the standard deviation.
+    In case our results vary significantly from the original results, we will attempt to tune hyperparameters and report on the necessary changes.
+    We will test the method across different random seeds to empirically assess stability and convergence.
+
+    Due to empirically long training times for Bayesian neural networks, complex convolutional neural network architectures and the large number of parameters ($\sim 2.3M$), we will not be considering image clasification experiments in this report.
+    We also believe they are not crucial to assessing the quality of the proposed approach.
+    This is because the linear layers (not involving convolution operations) are already evaluated using standard regression and classification data sets, whereas the authors report that using WHVI for convolutional filters does not yield interesting results due to the small number of parameters.
+
+    We will attempt to reproduce the findings regarding WHVI inference time to a smaller degree, because the workstation used in the experiments of the original paper is significantly more powerful than the one we used in this reproduction study.
 
     \section{Implementation details}\label{sec:implementation-details}
     % TODO describe how the models and algorithms were implemented (methods)
