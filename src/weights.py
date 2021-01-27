@@ -7,6 +7,7 @@ from utils import matmul_diag_left, kl_diag_normal
 
 from cuda.fwht import FWHTFunction as fwht_cuda
 from cpp.fwht import FWHTFunction as fwht_cpp
+from python.fwht import WHT_matmul as wht_matmul
 
 
 class WHVISquarePow2Matrix(nn.Module):
@@ -22,6 +23,7 @@ class WHVISquarePow2Matrix(nn.Module):
         self.D = D
         self.lambda_ = lambda_
         self.padding = 0  # For compatibility with the stacked version
+        self.wht_slow = wht_matmul()  # In case we need regular matmul, but this does not create H otherwise.
 
         self.bias = nn.Parameter(torch.zeros(1, D)) if bias else None
         self.s1 = nn.Parameter(torch.randn(D))
@@ -33,7 +35,10 @@ class WHVISquarePow2Matrix(nn.Module):
         if x.device.type == "cuda":
             return fwht_cuda.apply(x)
         else:
-            return fwht_cpp.apply(x)
+            if self.D < 2 ** 11:
+                return self.wht_slow.apply(x)
+            else:
+                return fwht_cpp.apply(x)
 
     @property
     def g_sigma(self):
