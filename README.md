@@ -8,7 +8,7 @@ The repository is organized as follows:
 * `test` contains unit tests for manually implemented functions;
 * `benchmarks` contains speed tests for manually implemented functions;
 * `experiments` contains reproductions of the experiments from the original paper;
-* `report` contains a reproducibility report;
+* `report` contains a reproducibility report.
 
 ## Example
 The snippet below illustrates the use of a feed-forward regression network that uses WHVI layers.

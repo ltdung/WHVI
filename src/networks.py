@@ -74,8 +74,6 @@ class WHVIRegression(WHVINetwork):
         Assumes a normal likelihood for the data.
         Currently tested only for scalar regression targets.
 
-        TODO consider good initializations for sigma.
-
         :param modules: iterable of nn.Module objects to be passed to an underlying nn.Sequential object.
         :param sigma: initial error tolerance.
         """
@@ -89,7 +87,6 @@ class WHVIRegression(WHVINetwork):
         Compute the mean negative log likelihood.
         The likelihood is assumed to be independent normal, i.e. y_hat[i] ~ N(y[i], sigma).
 
-        TODO check that the likelihood is correctly computed.
         Argument y should have shape (n_observations, n_outputs = 1), where n_observations represents the number of
         objects that have been processed in this pass and n_outputs the output dimensionality of the network
         (assumed 1). Argument y_hat should have shape (n_observations, n_outputs = 1, n_mc_samples), where n_mc_samples
