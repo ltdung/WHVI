@@ -28,12 +28,12 @@ torch.manual_seed(0)
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 # Set up the data
-X = torch.randn(200, 3, device=device)
-y = torch.reshape(X[:, 0] + X[:, 1] ** 2 - 0.3 * X[:, 2] ** 3, (-1, 1))
+x = torch.randn(200, 3, device=device)
+y = torch.reshape(x[:, 0] + x[:, 1] ** 2 - 0.3 * x[:, 2] ** 3, (-1, 1))
 perm = torch.randperm(200)
-X_train, X_test = X[perm[:150]], X[perm[150:]]
+x_train, x_test = x[perm[:150]], x[perm[150:]]
 y_train, y_test = y[perm[:150]], y[perm[150:]]
-train_dataset = TensorDataset(X_train, y_train)
+train_dataset = TensorDataset(x_train, y_train)
 train_loader = DataLoader(train_dataset, batch_size=64)
 
 # Create the model and optimization objects
@@ -48,7 +48,7 @@ scheduler = torch.optim.lr_scheduler.LambdaLR(optimizer, lambda t: (1 + 0.0005 *
 model.train_model(train_loader, optimizer, scheduler, epochs1=500, epochs2=1500)
 
 # Evaluate the model on test data
-error, mnll = model.eval_model(X_test, y_test)
+error, mnll = model.eval_model(x_test, y_test)
 ```
 
 ## Setup instructions
