@@ -6,6 +6,7 @@ from typing import Iterable, Tuple
 from tqdm import tqdm
 from layers import WHVI
 from likelihoods import GaussianLikelihood
+import pathlib
 
 
 class WHVINetwork(nn.Module):
@@ -83,7 +84,7 @@ class WHVINetwork(nn.Module):
         return self.current_mnll + self.current_kl if not ignore_kl else self.current_mnll
 
     def train_model(self, data_loader, optimizer, scheduler, epochs1: int = 500, epochs2: int = 5000,
-                    pbar_update_period=20, ignore_kl=False):
+                    pbar_update_period=20, ignore_kl=False, checkpoint_dir=None):
         self.train()
         self.likelihood.requires_grad = False  # Do not optimize likelihood parameters
         pbar = tqdm(range(epochs1), desc=f'[Fixed LH] KL = {self.current_kl:.2f}, MNLL = {self.current_mnll:.2f}')
@@ -106,6 +107,8 @@ class WHVINetwork(nn.Module):
                 optimizer.step()
                 scheduler.step()
                 self.zero_grad()
+            if epoch % 5000 == 0 and checkpoint_dir is not None:
+                torch.save(self.state_dict(), pathlib.Path(checkpoint_dir) / f'epoch-{epoch}.pth')  # Save model state
             if epoch % pbar_update_period == 0:
                 pbar.set_description(f'[Optimized LH] KL = {self.current_kl:.2f}, MNLL = {self.current_mnll:.2f}')
         self.eval()
@@ -128,7 +131,7 @@ class WHVINetwork(nn.Module):
 
 
 class WHVIRegression(WHVINetwork):
-    def __init__(self, modules: Iterable[nn.Module], sigma: float = 1.0):
+    def __init__(self, modules: Iterable[nn.Module], sigma: float = 1.0, **kwargs):
         """
         WHVI neural network for regression.
         Assumes a normal likelihood for the data.
@@ -137,7 +140,7 @@ class WHVIRegression(WHVINetwork):
         :param modules: iterable of nn.Module objects to be passed to an underlying WHVINetwork object.
         :param sigma: initial error tolerance.
         """
-        super().__init__(modules, likelihood=GaussianLikelihood(sigma))
+        super().__init__(modules, likelihood=GaussianLikelihood(sigma), **kwargs)
 
     def eval_model(self, X_test: torch.Tensor, y_test: torch.Tensor,
                    loss=lambda y_pred, y_true: F.mse_loss(y_pred.mean(dim=2), y_true)) -> Tuple[float, float]:
