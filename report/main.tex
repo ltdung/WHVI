@@ -23,18 +23,18 @@
 }
 \urlstyle{same}
 
-\newenvironment{comment}
-    {
-    \begin{center}
-    \begin{tabular}{|p{0.9\hsize}|}
-    \hline\\
-    \begin{footnotesize}\textbf{Comment:}}
-    {
-    \end{footnotesize}
-    \\\\\hline
-    \end{tabular}
-    \end{center}
-    }
+%\newenvironment{comment}
+%    {
+%    \begin{center}
+%    \begin{tabular}{|p{0.9\hsize}|}
+%    \hline\\
+%    \begin{footnotesize}\textbf{Comment:}}
+%    {
+%    \end{footnotesize}
+%    \\\\\hline
+%    \end{tabular}
+%    \end{center}
+%    }
 
 \newenvironment{disclaimer}
     {
@@ -64,11 +64,11 @@
     We state the most important findings to be reproduced and describe our approach to reproduce them in Section~\ref{sec:reproducibility-goals}.
     We describe the implementation details in Section~\ref{sec:implementation-details} and compare our empirical results to those in the original paper in Section~\ref{sec:running-the-experiments}.
     Finally, we conclude the report with an overall reproducibility assessment and discuss the clarity of the paper in Section~\ref{sec:conclusion-and-discussion}.
-    Throughout this report, we include comments which describe our assumptions regarding the original authors' intentions and why there might be some discrepancies between our results and the original ones.
+    Throughout this report, we include comments which describe our assumptions regarding the authors' intentions and why there might be some discrepancies between our results and the original ones.
     The implementation of the proposed method, experiments and other files related to this report are available at \url{https://github.com/davidnabergoj/WHVI}.
 
     \begin{disclaimer}
-    the author of this report was not an expert in the related fields at the time of writing.
+    the author of this reproducibility report was not an expert in the related fields at the time of writing.
     The major results of this report are based on multiple readings of the original paper and its supplementary material~\cite{rossi2019walsh}, re-runs of the described experiments, as well as reading some key referenced literature~\cite{le2014fastfood, blundell2015weight, fino1976unified, kingma2015variational}.
     At the time of this study, there was no available code for the original paper, so all methods were implemented according to the literature listed above.
     \end{disclaimer}
@@ -111,12 +111,11 @@
     One of the most important parts is the \texttt{WHVISquarePow2Matrix} class, which contains the parameters: elements of $\mathbf{S_1}$, $\mathbf{S_2}$, and the posterior mean $\mu$.
     It does not explicitly include elements of the diagonal covariance matrix $\Sigma$, but instead stores a parameter vector $\rho$ with $D$ elements, which corresponds to $\Sigma$ via a softplus transformation: $\Sigma = \mathrm{diag}(\sigma_1, \dots, \sigma_D)$ where $\sigma_i = \ln(1 + \exp(\rho_i))$.
 
-    \begin{comment}
-    the authors do not state how they represent $\Sigma$.
+    The authors do not state how they represent $\Sigma$.
     We chose the softplus transformation, because it was used in the seminal work on variational inference in neural networks~\cite{blundell2015weight}.
     The advantage is that we can optimize $\rho_i$ across the real line and disregard positivity constraints in the gradient-based optimization, then ensure non-negativity via a simple transformation.
     We acknowledge that the referenced work uses softplus for individual elements of the weight matrix, whereas we use it for elements of vector $\mathbf{g}$, which is indirectly related to the weight matrix via Equation~\ref{eqn:weight-sampling}.
-    \end{comment}
+
     To transform a batch of input vectors, a weight matrix is sampled from the posterior according to Equation~\ref{eqn:weight-sampling} and multiplied by the matrix of the batch. See Subsection~\ref{subsec:sampling-the-weight-matrix} for details.
 
     The \texttt{WHVIStackedMatrix} class represents matrices of arbitrary size.
@@ -137,22 +136,20 @@
     \subsection{Fast Walsh-Hadamard transform}
     An important contribution of the paper is the use of Fast Walsh-Hadamard transform (FWHT)~\cite{fino1976unified}, which allows for log-linear vector transformation time.
     We implemented the transform in Python and C++, both implementations can be used on the CPU and the GPU.
-    \begin{comment}
-        the authors implemented a custom C++/CUDA kernel for a batched version of FWHT.
-        At the time of writing, our implementation does not include a such a kernel due to unfamiliarity with GPU programming.
-    \end{comment}
+    We also implemented a CUDA kernel, which is considerably faster compared to using the Python and C++ implementations on the GPU, but achieves speeds that are similar to the CPU implementations for $D \approx 2^7$.
+    This was also observed by the authors.
     % TODO Discuss performance of C++, pytorch, CUDA
 
     \subsection{Priors and parameter initializations}
     According to the supplementary material for the original paper, we use a zero-mean prior with fully factorized covariance $\lambda \mathbf{I}$ for a particular layer, i.e. $\mathcal{N}(\mathbf{0}, \mathrm{diag}(\lambda, \dots, \lambda)$ for a chosen $\lambda > 0$.
-    \begin{comment}
-        we believe that the original paper should describe the choices of prior variances in more detail.
-        Currently, the supplement seems to suggest that a constant $\lambda = 10^{-5}$ was used in all layers of the deep Bayesian networks, but this is likely not the case.
-        Good choices of $\lambda$ are essential at each layer separately.
-        We have found that with such a small prior covariance, the predictions are typically just the mean.
-        However, by reconsidering the statement in the supplement, we may interpret it as putting a low prior covariance on the last layer and possibly higher ones on the previous layers.
-        This indeed substantially improves the results of the experiments.
-    \end{comment}
+
+    We believe that the original paper should describe the choices of prior variances in more detail.
+    Currently, the supplement seems to suggest that a constant $\lambda = 10^{-5}$ was used in all layers of the deep Bayesian networks, but this is likely not the case.
+    Good choices of $\lambda$ are essential at each layer separately.
+    We have found that with such a small prior covariance, the predictions are typically just the mean.
+    However, by reconsidering the statement in the supplement, we may interpret it as putting a low prior covariance on the last layer and possibly higher ones on the previous layers.
+    This indeed substantially improves the results of the experiments.
+
     The authors did not describe the initialization of $\mathbf{S_1}$, $\mathbf{S_2}$, $\Sigma$.
     We draw initial elements of $\mathbf{S_1}$ and $\mathbf{S_2}$ i.i.d.\ from a standard normal distribution and initial elements of $\rho$ i.i.d. from Uniform$(-3, -2)$.
 
@@ -165,6 +162,22 @@
     \section{Running the experiments}\label{sec:running-the-experiments}
     % TODO describe the details of how the experiments were run
 
+    \subsection{Toy example}
+    In this section, we consider the toy example from Section 3.1, Figure 4 in the original paper.
+
+    The authors do not provide an explicit formula for the function.
+    To replicate the experiment as closely as possible, we look at the plot and roughly observe some $(x, y)$ pairs -- extrema and in-between values.
+    We then use polynomial interpolation with a Vandermonde matrix to obtain a similar-looking function.
+
+    We have found that the results for this example depend heavily on initial $\lambda$ values in each layer as well as the initial scale $\sigma_0$ of the Gaussian likelihood.
+    Many parameter choices resulted in slow convergence and significant underestimated uncertainty.
+    Our suggestions are to set $\lambda$ values that get gradually smaller as we approach the output layer and set $\sigma_0$ to be sufficiently larger than zero.
+    In particular, our choices for modeling the toy data set were $\lambda_1=15, \lambda_2=5,\lambda_3=0.1, \sigma_0=5$.
+    We also observed that the KL term in ELBO would often be much larger than the MNLL term at the beginning of the optimization. Conversely, the MNLL term would get stuck at suboptimal value and be unable to escape this local minimum even after several thousand epochs.
+
+    To conclude, we were not able to reproduce the uncertainty estimates, visualized in Figure 4 of the original paper.
+    We suggest further research regarding parameter initialization.
+    % TODO pictures
 
     \section{Conclusion and discussion}\label{sec:conclusion-and-discussion}
     % TODO conclude with key findings regarding the reproducibility, discuss own results and authors' results.
