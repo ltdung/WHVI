@@ -3,25 +3,22 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from utils import matmul_diag_left, kl_diag_normal, build_H
-# from fwht.cuda.fwht import FWHTFunction
-# from fwht.cpp.fwht import FWHTFunction
+from utils import matmul_diag_left, kl_diag_normal
 
+import fwht.cuda
+import fwht.cpp
 
 class WHVISquarePow2Matrix(nn.Module):
-    def __init__(self, D, device, lambda_=1e-5, bias=False):
+    def __init__(self, D, lambda_=1e-5, bias=False):
         """
         Create a square WHVI matrix of size (D, D) where D is a power of 2.
 
         :param int D: number of rows/columns for the matrix. Must be a power of two.
-        :param device: torch device.
         :param float lambda_: prior variance.
         :param boolean bias: if True, include a bias in the linear operation.
         """
         super().__init__()
         self.D = D
-        self.H = build_H(D, device=device)
-        self.device = device
         self.lambda_ = lambda_
         self.padding = 0  # For compatibility with the stacked version
 
@@ -30,6 +27,12 @@ class WHVISquarePow2Matrix(nn.Module):
         self.s2 = nn.Parameter(torch.randn(D))
         self.g_mu = nn.Parameter(torch.zeros(D))
         self.g_rho = nn.Parameter(torch.rand(D) - 3)
+
+    def fwht(self, x):
+        if x.device == "cuda":
+            return fwht.cuda.fwht.FWHTFunction(x)
+        else:
+            return fwht.cpp.fwht.FWHTFunction(x)
 
     @property
     def g_sigma(self):
@@ -47,7 +50,12 @@ class WHVISquarePow2Matrix(nn.Module):
         The prior is a multivariate normal distribution with mean vector zero and diagonal covariance with all elements
         being equal to self.lambda_.
         """
-        return kl_diag_normal(self.g_mu, self.g_sigma, torch.zeros(self.D), torch.ones(self.D) * self.lambda_)
+        return kl_diag_normal(
+            self.g_mu,
+            self.g_sigma,
+            torch.zeros(self.D, device=self.g_mu.device),
+            torch.ones(self.D, device=self.g_mu.device) * self.lambda_
+        )
 
     def sample(self):
         """
@@ -56,9 +64,9 @@ class WHVISquarePow2Matrix(nn.Module):
 
         :return torch.Tensor: sampled matrix W.
         """
-        epsilon = torch.randn(self.D, device=self.device)
+        epsilon = torch.randn(self.D, device=self.g_mu.device)
         g_tilde = self.g_mu + self.g_sigma * epsilon
-        W = matmul_diag_left(self.s1, self.H @ matmul_diag_left(g_tilde, self.H @ torch.diag(self.s2)))
+        W = matmul_diag_left(self.s1, self.fwht(matmul_diag_left(g_tilde, self.fwht(torch.diag(self.s2)))))
         return W
 
     def forward(self, x):
@@ -66,7 +74,7 @@ class WHVISquarePow2Matrix(nn.Module):
 
 
 class WHVIStackedMatrix(nn.Module):
-    def __init__(self, n_in, n_out, device, lambda_=1e-5, bias=False):
+    def __init__(self, n_in, n_out, lambda_=1e-5, bias=False):
         """
         WHVI matrix with arbitrary dimensions (i.e. possibly non-square).
         A typical WHVI matrix is square with dimensions D x D where D == 2 ** d for some non-negative integer d.
@@ -74,7 +82,6 @@ class WHVIStackedMatrix(nn.Module):
 
         :param n_in: number of input features.
         :param n_out: number of output features.
-        :param device: torch device.
         :param lambda_: prior variance.
         :param boolean bias: if True, include a bias in the linear operation.
         """
@@ -86,8 +93,9 @@ class WHVIStackedMatrix(nn.Module):
         self.lambda_ = lambda_
 
         self.D_in, self.D_out, self.padding, self.stack = self.setup_dimensions(n_in, n_out)
-        self.weight_matrices = nn.ModuleList(
-            [WHVISquarePow2Matrix(self.D_in, device=device, lambda_=lambda_) for _ in range(self.stack)])
+        self.weight_matrices = nn.ModuleList([
+            WHVISquarePow2Matrix(self.D_in, lambda_=lambda_) for _ in range(self.stack)
+        ])
         self.bias = nn.Parameter(torch.zeros(1, self.D_out)) if bias else None
 
     @staticmethod
@@ -147,7 +155,7 @@ class WHVIStackedMatrix(nn.Module):
         :param torch.Tensor x: inputs of size (batch_size, self.n_in).
         :return torch.Tensor: outputs of size (batch_size, self.n_out).
         """
-        x_padded = torch.zeros((*x.size()[:-1], self.D_in), device=self.device)  # Add the extra zeros
+        x_padded = torch.zeros((*x.size()[:-1], self.D_in), device=x.device)  # Add the extra zeros
         x_padded[..., :self.n_in] = x
         output = F.linear(x_padded, self.sample(), self.bias)
         output = output[..., :self.n_out]  # Remove the extra elements
@@ -155,14 +163,12 @@ class WHVIStackedMatrix(nn.Module):
 
 
 class WHVIColumnMatrix(nn.Module):
-    def __init__(self, n_out, device, lambda_=1e-5, bias=False, transposed=False):
+    def __init__(self, n_out, lambda_=1e-5, bias=False, transposed=False):
         """
         WHVI column matrix.
         Expects a single input feature and produces n_out output features.
 
-
         :param int n_out: number of output features.
-        :param device: torch device.
         :param float lambda_: prior variance.
         :param boolean bias: if True, include a bias in the linear operation.
         :param boolean transposed: if True, treat the matrix as transposed. This effectively turns it into a layer that
@@ -171,7 +177,7 @@ class WHVIColumnMatrix(nn.Module):
         super().__init__()
         self.D = n_out
         self.D_adjusted = 2 ** math.ceil(math.log(n_out, 2))
-        self.weight_submodule = WHVISquarePow2Matrix(self.D_adjusted, device=device, lambda_=lambda_)
+        self.weight_submodule = WHVISquarePow2Matrix(self.D_adjusted, lambda_=lambda_)
         self.transposed = transposed
         self.bias = nn.Parameter(torch.zeros(1, 1 if transposed else n_out)) if bias else None
 

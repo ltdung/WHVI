@@ -92,11 +92,11 @@ def evaluate_bayesian_regression_dnn(X: np.ndarray, y: np.ndarray):
 
         # Set up the model
         net = WHVIRegression([
-            WHVILinear(8, 128, device=device),
+            WHVILinear(8, 128),
             nn.ReLU(),
-            WHVILinear(128, 128, device=device),
+            WHVILinear(128, 128),
             nn.ReLU(),
-            WHVILinear(128, 1, device=device)
+            WHVILinear(128, 1)
         ], eval_samples=64)
         net = net.to(device=device)
 
