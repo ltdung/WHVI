@@ -29,7 +29,7 @@ class WHVISquarePow2Matrix(nn.Module):
         self.g_rho = nn.Parameter(torch.rand(D) - 3)
 
     def fwht(self, x):
-        if x.device == "cuda":
+        if x.device.type == "cuda":
             return fwht.cuda.fwht.FWHTFunction(x)
         else:
             return fwht.cpp.fwht.FWHTFunction(x)
