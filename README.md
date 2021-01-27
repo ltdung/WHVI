@@ -17,34 +17,38 @@ See the [Toy example](./experiments/Toy%20example.ipynb) notebook for additional
 
 ```python
 import torch
-import torch.nn as nn
-import torch.optim as optim
-
-from torch.utils.data import DataLoader
+from torch.utils.data import DataLoader, TensorDataset
 from networks import WHVIRegression
 from layers import WHVILinear
 
-# Create the network and optimizer
+# Seed for reproducibility
+torch.manual_seed(0)
+
+# Use GPU or CPU
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-model = WHVIRegression([
-    WHVILinear(8, 128, device=device),
-    nn.ReLU(),
-    WHVILinear(128, 128, device=device),
-    nn.ReLU(),
-    WHVILinear(128, 1, device=device)
-])
-model = model.to(device=device)
-optimizer = optim.Adam(model.parameters(), lr=0.001)
-scheduler = optim.lr_scheduler.LambdaLR(optimizer, lambda t: (1 + 0.0005 * t) ** (-0.3))
 
 # Set up the data
-train_loader = DataLoader(...)  # Create your train dataset loader here
-model.train_model(train_loader, optimizer, scheduler)
-x_test = torch.Tensor(...)  # Test data
-y_test = torch.Tensor(...)  # Test targets
+X = torch.randn(200, 3, device=device)
+y = torch.reshape(X[:, 0] + X[:, 1] ** 2 - 0.3 * X[:, 2] ** 3, (-1, 1))
+perm = torch.randperm(200)
+X_train, X_test = X[perm[:150]], X[perm[150:]]
+y_train, y_test = y[perm[:150]], y[perm[150:]]
+train_dataset = TensorDataset(X_train, y_train)
+train_loader = DataLoader(train_dataset, batch_size=64)
+
+# Create the model and optimization objects
+model = WHVIRegression([
+    WHVILinear(3, 16, lambda_=2.0),
+    torch.nn.ReLU(),
+    WHVILinear(16, 1)
+])
+model = model.to(device)
+optimizer = torch.optim.Adam(model.parameters(), lr=0.001)
+scheduler = torch.optim.lr_scheduler.LambdaLR(optimizer, lambda t: (1 + 0.0005 * t) ** (-0.3))
+model.train_model(train_loader, optimizer, scheduler, epochs1=500, epochs2=1500)
 
 # Evaluate the model on test data
-error, mnll = model.eval_model(x_test, y_test)
+error, mnll = model.eval_model(X_test, y_test)
 ```
 
 ## Setup instructions
