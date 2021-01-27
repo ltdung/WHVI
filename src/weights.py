@@ -43,7 +43,7 @@ class WHVISquarePow2Matrix(nn.Module):
     @property
     def g_sigma(self):
         """
-        Square roots of the covariance matrix for g (i.e. standard deviations of univariate Normal distributions).
+        Square roots (!!!) of the covariance matrix for g (i.e. standard deviations of univariate Normal distributions).
         These are parameterized by g_sigma = softplus(g_rho) or equivalently g_sigma = 1 + log(1 + g_rho) to ensure
         non-negative values.
         """
@@ -63,6 +63,15 @@ class WHVISquarePow2Matrix(nn.Module):
             torch.ones(self.D, device=self.g_mu.device) * self.lambda_
         )
 
+    def w_bar(self, u):
+        """
+        Auxiliary function from the paper that allows for the use of the local re-parameterization trick.
+
+        :param torch.Tensor u: input tensor.
+        :return torch.Tensor: output tensor, a column vector.
+        """
+        return matmul_diag_left(self.s1, self.fwht(matmul_diag_left(u, self.fwht(torch.diag(self.s2)))))
+
     def sample(self):
         """
         Sample a matrix W according to W = S1 @ H @ diag(g_tilde) @ H @ S2 with g_tilde drawn from the variational
@@ -75,8 +84,22 @@ class WHVISquarePow2Matrix(nn.Module):
         W = matmul_diag_left(self.s1, self.fwht(matmul_diag_left(g_tilde, self.fwht(torch.diag(self.s2)))))
         return W
 
-    def forward(self, x):
-        return F.linear(x, self.sample(), self.bias)
+    def sample_lrt(self, h):
+        """
+        Sample the matrix-vector product W @ h according to the local re-parameterization trick.
+        :return torch.Tensor: sample of W @ h.
+        """
+        epsilon = torch.randn(self.D, device=self.g_mu.device)
+        return h @ (self.w_bar(self.g_mu) + self.w_bar(self.g_sigma * epsilon)).T
+
+    def forward(self, x, use_lrt=True):
+        if use_lrt:
+            if self.bias is not None:
+                return self.sample_lrt(x) + self.bias
+            else:
+                return self.sample_lrt(x)
+        else:
+            return F.linear(x, self.sample(), self.bias)
 
 
 class WHVIStackedMatrix(nn.Module):
@@ -147,7 +170,10 @@ class WHVIStackedMatrix(nn.Module):
         """
         return torch.cat([weight.sample() for weight in self.weight_matrices])
 
-    def forward(self, x):
+    def sample_lrt(self, h):
+        return torch.cat([weight.sample_lrt(h) for weight in self.weight_matrices], dim=1)
+
+    def forward(self, x, use_lrt=False):
         """
         Perform the forward pass.
         We pad the input x by zeros on the "right side" so that the length of the second dimension is self.D_in, then
@@ -155,14 +181,23 @@ class WHVIStackedMatrix(nn.Module):
         We remove the elements, corresponding to the padded zeros after matrix multiplication. The length of the second
         dimension of the output thus becomes self.n_out.
 
-        TODO pre-allocate x_padded (vector of zeros) if possible.
+        It is possible to pre-allocate x_padded (vector of zeros) if we know the batch size in advance. Future work.
 
+        :param use_lrt: use the local re-parameterization trick instead of sampling weight matrices. This is slower
+            than regular sampling.
         :param torch.Tensor x: inputs of size (batch_size, self.n_in).
         :return torch.Tensor: outputs of size (batch_size, self.n_out).
         """
         x_padded = torch.zeros((*x.size()[:-1], self.D_in), device=x.device)  # Add the extra zeros
         x_padded[..., :self.n_in] = x
-        output = F.linear(x_padded, self.sample(), self.bias)
+
+        if use_lrt:
+            if self.bias is not None:
+                output = self.sample_lrt(x_padded) + self.bias
+            else:
+                output = self.sample_lrt(x_padded)
+        else:
+            output = F.linear(x_padded, self.sample(), self.bias)
         output = output[..., :self.n_out]  # Remove the extra elements
         return output
 
