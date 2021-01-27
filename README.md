@@ -7,11 +7,13 @@ The repository is organized as follows:
 * `src` contains the source code for the core WHVI functionality;
 * `test` contains unit tests for manually implemented functions;
 * `benchmarks` contains speed tests for manually implemented functions;
-* `experiments` contains reproductions of the experiments from the original paper. 
+* `experiments` contains reproductions of the experiments from the original paper;
+* `report` contains a reproducibility report;
 
 ## Example
 The snippet below illustrates the use of a feed-forward regression network that uses WHVI layers.
 It also is possible to seamlessly add standard modules like `nn.Linear` layers.
+See the [Toy example](./experiments/Toy%20example.ipynb) notebook for additional information.
 
 ```python
 import torch
@@ -44,8 +46,6 @@ y_test = torch.Tensor(...)  # Test targets
 # Evaluate the model on test data
 error, mnll = model.eval_model(x_test, y_test)
 ```
-
-See the [Toy example](./experiments/Toy%20example.ipynb) notebook for additional information.
 
 ## Setup instructions
 Type the following instructions into an appropriate terminal:
