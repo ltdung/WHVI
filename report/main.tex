@@ -174,6 +174,11 @@
     Our suggestions are to set $\lambda$ values that get gradually smaller as we approach the output layer and set $\sigma_0$ to be sufficiently larger than zero.
     In particular, our choices for modeling the toy data set were $\lambda_1=15, \lambda_2=5,\lambda_3=0.1, \sigma_0=5$.
     We also observed that the KL term in ELBO would often be much larger than the MNLL term at the beginning of the optimization. Conversely, the MNLL term would get stuck at suboptimal value and be unable to escape this local minimum even after several thousand epochs.
+    After optimization, we observed several times that all but one pair of $\mu$ and $\Sigma$ parameters were almost exactly equal to zero and $\lambda$, indicating that the KL term was too dominant, drawing the variational posterior too close to the prior.
+
+    The authors also state that they obtained a model with 1541 parameters for the toy example, however we obtained one with 1537 parameters.
+    We were not able to identify the missing parameters and we believe that they are not hyperparameters, because the authors refer to hyperparameters separately in a Supplement section (i.e.\ not as ``parameters'').
+    These missing parameters might be the solution to the observed problems in our experiments.
 
     To conclude, we were not able to reproduce the uncertainty estimates, visualized in Figure 4 of the original paper.
     We suggest further research regarding parameter initialization.
