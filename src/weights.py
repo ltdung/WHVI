@@ -5,8 +5,9 @@ import torch.nn.functional as F
 
 from utils import matmul_diag_left, kl_diag_normal
 
-import fwht.cuda
-import fwht.cpp
+from cuda.fwht import FWHTFunction as fwht_cuda
+from cpp.fwht import FWHTFunction as fwht_cpp
+
 
 class WHVISquarePow2Matrix(nn.Module):
     def __init__(self, D, lambda_=1e-5, bias=False):
@@ -30,9 +31,9 @@ class WHVISquarePow2Matrix(nn.Module):
 
     def fwht(self, x):
         if x.device.type == "cuda":
-            return fwht.cuda.fwht.FWHTFunction(x)
+            return fwht_cuda.apply(x)
         else:
-            return fwht.cpp.fwht.FWHTFunction(x)
+            return fwht_cpp.apply(x)
 
     @property
     def g_sigma(self):
