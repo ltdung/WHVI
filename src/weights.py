@@ -52,7 +52,7 @@ class WHVISquarePow2Matrix(nn.Module):
     @property
     def kl(self):
         """
-        KL divergence from the variational posterior to the prior.
+        KL divergence from the prior to the variational posterior.
         The prior is a multivariate normal distribution with mean vector zero and diagonal covariance with all elements
         being equal to self.lambda_.
         """
@@ -135,7 +135,7 @@ class WHVIStackedMatrix(nn.Module):
         """
         KL divergence for this module.
 
-        :return torch.Tensor, scalar: KL divergence from the variational posterior to the prior.
+        :return torch.Tensor, scalar: KL divergence from the prior to the variational posterior.
         """
         return sum(weight.kl for weight in self.weight_matrices)
 
@@ -191,7 +191,7 @@ class WHVIColumnMatrix(nn.Module):
         """
         KL divergence for this module.
 
-        :return torch.Tensor, scalar: KL divergence from the variational posterior to the prior.
+        :return torch.Tensor, scalar: KL divergence from the prior to the variational posterior.
         """
         return self.weight_submodule.kl
 
