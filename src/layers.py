@@ -36,7 +36,9 @@ class WHVILinear(nn.Module, WHVI):
 
     @property
     def kl(self):
-        """KL divergence from the variational posterior to the prior"""
+        """
+        KL divergence from the prior to the variational posterior.
+        """
         return self.weight_submodule.kl
 
     def forward(self, x):
