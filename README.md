@@ -62,7 +62,9 @@ cd src/fwht/cuda && python setup.py install || cd ../../..  # Compile CUDA kerne
 ```
 The main dependency is PyTorch.
 We use Sklearn and Numpy for to evaluate models on standard datasets.
+Notebooks can be viewed after installing jupyter.
 We show progress bars during model training using tqdm.
+
 
 ## References
 * S. Rossi, S. Marmin, and M. Filippone (2019). [Walsh-Hadamard Variational Inference for Bayesian Deep Learning.](https://arxiv.org/abs/1905.11248) *arXiv preprint arXiv:1905.11248*  
