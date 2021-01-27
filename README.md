@@ -61,7 +61,7 @@ cd src/fwht/cpp && python setup.py install || cd ../../..   # Compile C++ FWHT f
 cd src/fwht/cuda && python setup.py install || cd ../../..  # Compile CUDA kernel for FWHT
 ```
 The main dependency is PyTorch.
-We use Sklearn and Numpy for to evaluate models on standard datasets.
+We use sklearn, numpy, pandas, and xlrd to evaluate models on standard datasets.
 Notebooks can be viewed after installing jupyter.
 We show progress bars during model training using tqdm.
 
