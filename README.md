@@ -48,10 +48,11 @@ error, mnll = model.eval_model(x_test, y_test)
 ```
 
 ## Setup instructions
-Type the following instructions into an appropriate terminal:
+Type the following commands into a terminal:
 ```
-conda env create -f environment.yml  # Configure the main environment
-cd src/fwht/cpp && python setup.py install || cd ../../..  # Compile C++ FWHT functions
+conda env create -f environment.yml                         # Create the conda environment
+cd src/fwht/cpp && python setup.py install || cd ../../..   # Compile C++ FWHT functions
+cd src/fwht/cuda && python setup.py install || cd ../../..  # Compile CUDA kernel for FWHT
 ```
 The main dependency is PyTorch.
 We use Sklearn and Numpy for to evaluate models on standard datasets.
