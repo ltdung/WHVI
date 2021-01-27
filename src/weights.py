@@ -93,6 +93,12 @@ class WHVISquarePow2Matrix(nn.Module):
         return h @ (self.w_bar(self.g_mu) + self.w_bar(self.g_sigma * epsilon)).T
 
     def forward(self, x, use_lrt=True):
+        """
+        Perform the forward pass.
+
+        :param x: input tensor of shape (batch_size, self.D)
+        :param use_lrt: use the local re-parameterization trick. Slightly slower than the regular sampling method.
+        """
         if use_lrt:
             if self.bias is not None:
                 return self.sample_lrt(x) + self.bias
@@ -173,7 +179,7 @@ class WHVIStackedMatrix(nn.Module):
     def sample_lrt(self, h):
         return torch.cat([weight.sample_lrt(h) for weight in self.weight_matrices], dim=1)
 
-    def forward(self, x, use_lrt=False):
+    def forward(self, x, use_lrt=True):
         """
         Perform the forward pass.
         We pad the input x by zeros on the "right side" so that the length of the second dimension is self.D_in, then
@@ -183,8 +189,8 @@ class WHVIStackedMatrix(nn.Module):
 
         It is possible to pre-allocate x_padded (vector of zeros) if we know the batch size in advance. Future work.
 
-        :param use_lrt: use the local re-parameterization trick instead of sampling weight matrices. This is slower
-            than regular sampling.
+        :param use_lrt: use the local re-parameterization trick instead of sampling weight matrices. This is slightly
+            slower than regular sampling.
         :param torch.Tensor x: inputs of size (batch_size, self.n_in).
         :return torch.Tensor: outputs of size (batch_size, self.n_out).
         """
