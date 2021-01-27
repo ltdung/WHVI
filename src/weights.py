@@ -3,11 +3,11 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from utils import matmul_diag_left, kl_diag_normal
+from src.utils import matmul_diag_left, kl_diag_normal
 
-from cuda.fwht import FWHTFunction as fwht_cuda
-from cpp.fwht import FWHTFunction as fwht_cpp
-from python.fwht import WHT_matmul as wht_matmul
+from src.fwht.cuda.fwht import FWHTFunction as fwht_cuda
+from src.fwht.cpp.fwht import FWHTFunction as fwht_cpp
+from src.fwht.python.fwht import WHT_matmul as wht_matmul
 
 
 class WHVISquarePow2Matrix(nn.Module):

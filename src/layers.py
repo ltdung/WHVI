@@ -1,7 +1,7 @@
 import torch.nn as nn
 
-from utils import is_pow_of_2
-from weights import WHVISquarePow2Matrix, WHVIStackedMatrix, WHVIColumnMatrix
+from src.utils import is_pow_of_2
+from src.weights import WHVISquarePow2Matrix, WHVIStackedMatrix, WHVIColumnMatrix
 
 
 class WHVI:

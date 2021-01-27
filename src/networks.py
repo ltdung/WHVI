@@ -4,8 +4,8 @@ import torch.nn.functional as F
 
 from typing import Iterable, Tuple
 from tqdm import tqdm
-from layers import WHVI
-from likelihoods import GaussianLikelihood
+from src.layers import WHVI
+from src.likelihoods import GaussianLikelihood
 import pathlib
 
 

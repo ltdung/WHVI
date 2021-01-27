@@ -8,8 +8,8 @@ from torch.utils.data import DataLoader, TensorDataset
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
 
-from layers import WHVILinear
-from networks import WHVIRegression
+from src.layers import WHVILinear
+from src.networks import WHVIRegression
 
 
 def make_optimizer(net, gamma=0.0005, p=0.3, lambda0=0.001):

@@ -18,8 +18,8 @@ See the [Toy example](./experiments/Toy%20example.ipynb) notebook for additional
 ```python
 import torch
 from torch.utils.data import DataLoader, TensorDataset
-from networks import WHVIRegression
-from layers import WHVILinear
+from src.networks import WHVIRegression
+from src.layers import WHVILinear
 
 # Seed for reproducibility
 torch.manual_seed(0)

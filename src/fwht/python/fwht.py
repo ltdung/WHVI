@@ -1,6 +1,6 @@
 import torch
 
-from utils import build_H
+from src.utils import build_H
 
 
 class WHT_matmul:
