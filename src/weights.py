@@ -95,7 +95,6 @@ class WHVIStackedMatrix(nn.Module):
 
         self.n_in = n_in
         self.n_out = n_out
-        self.device = device
         self.lambda_ = lambda_
 
         self.D_in, self.D_out, self.padding, self.stack = self.setup_dimensions(n_in, n_out)
