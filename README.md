@@ -45,6 +45,8 @@ model = WHVIRegression([
 model = model.to(device)
 optimizer = torch.optim.Adam(model.parameters(), lr=0.001)
 scheduler = torch.optim.lr_scheduler.LambdaLR(optimizer, lambda t: (1 + 0.0005 * t) ** (-0.3))
+
+# Train the model for 500 epochs with fixed variance and 1500 epochs with optimized variance
 model.train_model(train_loader, optimizer, scheduler, epochs1=500, epochs2=1500)
 
 # Evaluate the model on test data
