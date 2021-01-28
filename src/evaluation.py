@@ -23,8 +23,7 @@ def make_optimizer(net, gamma=0.0005, p=0.3, lambda0=0.001):
     :return tuple: optimizer and scheduler object object.
     """
     optimizer = optim.Adam(net.parameters(), lr=lambda0)
-    scheduler = optim.lr_scheduler.LambdaLR(optimizer, lambda t: lambda0 * (
-            (1 + gamma * t) ** (-p)))  # Set the learning rate decay
+    scheduler = optim.lr_scheduler.LambdaLR(optimizer, lambda t: lambda0 * ((1 + gamma * t) ** (-p)))
     return optimizer, scheduler
 
 
@@ -51,8 +50,8 @@ def evaluate_bayesian_regression_dnn(X: np.ndarray, y: np.ndarray, device, check
     :param y: vector of targets.
     :param device: torch device.
     :param checkpoint_dir: directory where models will be saved each 5000 epochs of the 50000 epoch optimization.
-    :return Tuple[float]: sample mean and sample standard deviation of the test error (MSE) and test MNLL (WHVI) across
-                          8 random splits of data.
+    :return Tuple[float]: sample mean and sample standard deviation of the test error and test MNLL across 8 random
+        splits of data.
     """
     assert len(y.shape) == 2 and y.shape[1] == 1
     assert len(X.shape) == 2
