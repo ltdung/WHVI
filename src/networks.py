@@ -27,6 +27,7 @@ class WHVINetwork(nn.Module, WHVI):
         self.train_samples = train_samples
         self.eval_samples = eval_samples
         self.current_mnll = 0.0
+        self.current_kl = 0.0
 
     @property
     def kl(self):
@@ -64,13 +65,14 @@ class WHVINetwork(nn.Module, WHVI):
         :return torch.Tensor: ELBO value.
         """
         self.current_mnll = self.likelihood.mnll_batch_estimate(y, self(x), n)
-        return self.current_mnll + self.kl if not ignore_kl else self.current_mnll
+        self.current_kl = self.kl
+        return self.current_mnll + self.current_kl if not ignore_kl else self.current_mnll
 
     def train_model(self, data_loader, optimizer, scheduler, epochs1: int = 500, epochs2: int = 5000,
                     pbar_update_period=20, ignore_kl=False, checkpoint_dir=None):
         self.train()
         self.likelihood.requires_grad = False  # Do not optimize likelihood parameters
-        pbar = tqdm(range(epochs1), desc=f'[Fixed LH] KL = {self.kl:.2f}, MNLL = {self.current_mnll:.2f}')
+        pbar = tqdm(range(epochs1), desc=f'[Fixed LH] KL = {self.current_kl:.2f}, MNLL = {self.current_mnll:.2f}')
         for epoch in pbar:
             for batch_index, (data_x, data_y) in enumerate(data_loader):
                 loss = self.loss(data_x, data_y, n=len(data_loader.dataset), ignore_kl=ignore_kl)
@@ -79,10 +81,10 @@ class WHVINetwork(nn.Module, WHVI):
                 scheduler.step()
                 self.zero_grad(set_to_none=True)
             if epoch % pbar_update_period == 0:
-                pbar.set_description(f'[Fixed LH] KL = {self.kl:.2f}, MNLL = {self.current_mnll:.2f}')
+                pbar.set_description(f'[Fixed LH] KL = {self.current_kl:.2f}, MNLL = {self.current_mnll:.2f}')
 
         self.likelihood.requires_grad = True  # Optimize likelihood parameters
-        pbar = tqdm(range(epochs2), desc=f'[Optimized LH] KL = {self.kl:.2f}, MNLL = {self.current_mnll:.2f}')
+        pbar = tqdm(range(epochs2), desc=f'[Optimized LH] KL = {self.current_kl:.2f}, MNLL = {self.current_mnll:.2f}')
         for epoch in pbar:
             for batch_index, (data_x, data_y) in enumerate(data_loader):
                 loss = self.loss(data_x, data_y, n=len(data_loader.dataset), ignore_kl=ignore_kl)
@@ -93,7 +95,7 @@ class WHVINetwork(nn.Module, WHVI):
             if epoch % 5000 == 0 and checkpoint_dir is not None:
                 torch.save(self.state_dict(), pathlib.Path(checkpoint_dir) / f'epoch-{epoch}.pth')  # Save model state
             if epoch % pbar_update_period == 0:
-                pbar.set_description(f'[Optimized LH] KL = {self.kl:.2f}, MNLL = {self.current_mnll:.2f}')
+                pbar.set_description(f'[Optimized LH] KL = {self.current_kl:.2f}, MNLL = {self.current_mnll:.2f}')
         self.eval()
 
     def eval_model(self, X_test: torch.Tensor, y_test: torch.Tensor, loss) -> Tuple[float, float]:
