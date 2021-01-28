@@ -110,7 +110,7 @@ class WHVINetwork(nn.Module, WHVI):
         """
         self.eval()
         y_pred = self(X_test)
-        test_mnll = self.mnll(y_test, y_pred)  # TODO fix, might need to rewrite method or create a single batch?
+        test_mnll = self.likelihood.mnll_batch_estimate(y_test, y_pred, n=y_test.size()[0])
         test_error = loss(y_pred, y_test)
         return float(test_error), float(test_mnll)
 

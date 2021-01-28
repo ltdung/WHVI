@@ -6,13 +6,7 @@ class Likelihood:
     def __init__(self):
         pass
 
-    def nll(self, *args):
-        return 0.0
-
-    def mnll(self, *args):
-        return 0.0
-
-    def mnll_batch_estimate(self, *args):
+    def mnll_batch_estimate(self, *args, **kwargs):
         return 0.0
 
 
