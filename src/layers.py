@@ -9,7 +9,11 @@ class WHVI:
         """
         Abstract class for WHVI layers.
         """
-        self.kl = 0.0
+        pass
+
+    @property
+    def kl(self):
+        return 0.0
 
 
 class WHVILinear(nn.Module, WHVI):
@@ -19,7 +23,6 @@ class WHVILinear(nn.Module, WHVI):
 
         :param int n_in: input dimensionality.
         :param int n_out: output dimensionality.
-        :param device: torch device.
         :param float lambda_: prior variance.
         :param boolean bias: if True, add a bias column after the linear operation in forward(x). This bias column is
                              optimized (not treated variationally).
