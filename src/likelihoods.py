@@ -21,24 +21,6 @@ class GaussianLikelihood(nn.Module, Likelihood):
         super().__init__()
         self.sigma = nn.Parameter(torch.tensor(sigma))
 
-    def nll(self, y: torch.Tensor, y_hat: torch.Tensor):
-        """
-
-        :param torch.Tensor, scalar y:
-        :param torch.Tensor, scalar y_hat:
-        :return torch.Tensor, scalar:
-        """
-        return -torch.distributions.Normal(y_hat, self.sigma).log_prob(y)
-
-    def mnll(self, y: torch.Tensor, y_hat: torch.Tensor) -> torch.Tensor:
-        """
-
-        :param torch.Tensor, scalar y:
-        :param torch.Tensor, vector y_hat:
-        :return torch.Tensor, scalar:
-        """
-        return (-torch.distributions.Normal(y_hat, self.sigma).log_prob(y)).mean()
-
     def mnll_batch_estimate(self, y: torch.Tensor, y_hat: torch.Tensor, n: int) -> torch.Tensor:
         """
 
@@ -49,7 +31,6 @@ class GaussianLikelihood(nn.Module, Likelihood):
         """
         m = y_hat.size()[0]
         n_mc = y_hat.size()[2]
-        mnll = -n / (m * n_mc) * sum([
-            torch.distributions.Normal(y_hat[:, 0, j], self.sigma).log_prob(y[:, 0]).sum() for j in range(n_mc)
-        ])
+        mnll = -n / (m * n_mc) * torch.distributions.Normal(y_hat.T.flatten(), self.sigma).log_prob(
+            y.flatten().repeat(n_mc)).sum()
         return mnll
