@@ -121,7 +121,7 @@ class WHVINetwork(nn.Module):
         :param torch.Tensor y_test: test targets.
         :param loss: loss function which accepts predicted values of shape (batch_size, out_dim, mc_samples) as the
             first and target values of shape (batch_size, out_dim) as the second argument. Returns a scalar tensor.
-        :return tuple: MSE loss and MNLL.
+        :return tuple: loss value and MNLL.
         """
         self.eval()
         y_pred = self(X_test)
