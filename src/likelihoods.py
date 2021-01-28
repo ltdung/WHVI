@@ -23,8 +23,7 @@ class GaussianLikelihood(nn.Module, Likelihood):
         :param int n: data set size (training set size when training, test set size when testing).
         :return torch.Tensor, scalar: mean negative log likelihood.
         """
-        m = y_hat.size()[0]
-        n_mc = y_hat.size()[2]
-        mnll = -n / (m * n_mc) * torch.distributions.Normal(y_hat.T.flatten(), self.sigma).log_prob(
-            y.flatten().repeat(n_mc)).sum()
+        m, n_out, n_mc = y_hat.size()
+        mnll = -n / (m * n_mc) * sum(torch.distributions.Normal(y_hat[:, i, :].T.flatten(), self.sigma).log_prob(
+            y[:, i].flatten().repeat(n_mc)).sum() for i in range(n_out))
         return mnll

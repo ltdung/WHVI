@@ -128,6 +128,6 @@ class WHVIRegression(WHVINetwork):
         super().__init__(modules, likelihood=GaussianLikelihood(sigma), **kwargs)
 
     def eval_model(self, X_test: torch.Tensor, y_test: torch.Tensor,
-                   loss=lambda y_pred, y_true: torch.sqrt(F.mse_loss(y_pred.mean(dim=2), y_true))) -> Tuple[
-        float, float]:
+                   loss=lambda y_pred, y_true: torch.sqrt(
+                       F.mse_loss(y_pred.mean(dim=2).flatten(), y_true.flatten()))) -> Tuple[float, float]:
         return super().eval_model(X_test, y_test, loss)

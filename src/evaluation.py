@@ -53,7 +53,7 @@ def evaluate_bayesian_regression_dnn(X: np.ndarray, y: np.ndarray, device, check
     :return Tuple[float]: sample mean and sample standard deviation of the test error and test MNLL across 8 random
         splits of data.
     """
-    assert len(y.shape) == 2 and y.shape[1] == 1
+    assert len(y.shape) == 2
     assert len(X.shape) == 2
     assert len(X) == len(y)
 
@@ -81,7 +81,7 @@ def evaluate_bayesian_regression_dnn(X: np.ndarray, y: np.ndarray, device, check
             nn.ReLU(),
             WHVILinear(128, 128, lambda_=15.0),
             nn.ReLU(),
-            WHVILinear(128, 1)
+            WHVILinear(128, y_test.size()[1])
         ], eval_samples=64)
         model = model.to(device=device)
 
