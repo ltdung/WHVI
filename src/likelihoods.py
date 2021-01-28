@@ -47,10 +47,9 @@ class GaussianLikelihood(nn.Module, Likelihood):
         :param int n: data set size (training set size when training, test set size when testing).
         :return torch.Tensor, scalar: mean negative log likelihood.
         """
-        mnll = torch.tensor([0.0], device=y.device)
-        m = y.size()[0]  # Batch size
-        for j in range(m):
-            tmp = self.mnll(y[j], y_hat[j])
-            mnll += tmp
-        mnll *= n / m
-        return mnll[0]
+        m = y_hat.size()[0]
+        n_mc = y_hat.size()[2]
+        mnll = -n / (m * n_mc) * sum([
+            torch.distributions.Normal(y_hat[:, 0, j], self.sigma).log_prob(y[:, 0]).sum() for j in range(n_mc)
+        ])
+        return mnll
