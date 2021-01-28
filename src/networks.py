@@ -115,7 +115,7 @@ class WHVINetwork(nn.Module):
 
     def eval_model(self, X_test: torch.Tensor, y_test: torch.Tensor, loss) -> Tuple[float, float]:
         """
-        Evaluate the model on test data. Compute test error (MSE loss) and MNLL.
+        Evaluate the model on test data. Compute test error (loss value) and MNLL.
 
         :param torch.Tensor X_test: test data.
         :param torch.Tensor y_test: test targets.
