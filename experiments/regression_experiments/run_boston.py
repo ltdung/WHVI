@@ -15,4 +15,6 @@ device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 # device = torch.device('cpu')
 
 print(f'Using torch device: {device}')
-error_mean, error_sd, mnll_mean, mnll_sd = evaluate_bayesian_regression_dnn(X, y, device, checkpoint_dir='../checkpoints/concrete')
+error_mean, error_sd, mnll_mean, mnll_sd = evaluate_bayesian_regression_dnn(
+    X, y, device, checkpoint_dir='../checkpoints/concrete'
+)
