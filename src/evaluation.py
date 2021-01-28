@@ -97,7 +97,7 @@ def evaluate_bayesian_regression_dnn(X: np.ndarray, y: np.ndarray, device, check
 
         # Evaluate the model on test data and store the result in lists
         error, mnll = model.eval_model(X_test, y_test)
-        print(f"MSE: {error}, MNLL: {mnll}")
+        print(f"Error: {error}, MNLL: {mnll}")
         test_errors.append(error)
         test_mnlls.append(mnll)
 
