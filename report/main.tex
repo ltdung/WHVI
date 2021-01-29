@@ -42,7 +42,7 @@
     \begin{center}
     \begin{tabular}{|p{0.9\hsize}|}
     \hline\\
-    \begin{footnotesize}\textbf{Disclaimer:}}
+    \begin{footnotesize}\textbf{Disclaimer.}}
     {
     \end{footnotesize}
     \\\\\hline
@@ -70,9 +70,9 @@
     The implementation of the proposed method, experiments and other files related to this report are available at \url{https://github.com/davidnabergoj/WHVI}.
 
     \begin{disclaimer}
-    the author of this reproducibility report was not an expert in the related fields at the time of writing.
-    The major results of this report are based on multiple readings of the original paper and its supplementary material~\cite{rossi2019walsh}, re-runs of the described experiments, as well as reading some key referenced literature~\cite{le2014fastfood, blundell2015weight, fino1976unified, kingma2015variational}.
-    At the time of this study, there was no available code for the original paper, so all methods were implemented according to the listed literature.
+    The author of this reproducibility report was not an expert in the related fields at the time of writing.
+    The major results of this report are based on multiple readings of the original paper and its supplementary material~\cite{rossi2019walsh}, re-runs of the described experiments, as well as reading some key referenced literature~\cite{le2014fastfood, blundell2015weight, fino1976unified, kingma2015variational, rossi2019good}.
+    At the time of this reproduction, there was no available code for the methods and experiments in original paper, so our implementation is based on the listed literature.
     \end{disclaimer}
 
     \section{Brief review of the paper}\label{sec:brief-review-of-the-paper}
@@ -101,13 +101,15 @@
     If our results vary significantly from the original ones, we will attempt to tune hyperparameters and report on the necessary changes.
     We will test the method across different random seeds to empirically assess stability and convergence.
 
-    Due to empirically long training times for Bayesian neural networks, complex convolutional neural network architectures and the large number of parameters ($\sim 2.3M$), we will not be considering image clasification experiments in this report.
+    Due to empirically long training times for Bayesian neural networks, complex convolutional neural network architectures and the large number of parameters ($\sim 2.3$M), we will not be considering image clasification experiments in this report.
     We also believe they are not crucial to assessing the quality of the proposed approach.
     This is because the linear layers (not involving convolution operations) are already evaluated using standard regression and classification data sets, whereas the authors report that using WHVI for convolutional filters does not yield interesting results due to the small number of parameters.
 
     We will attempt to reproduce the findings regarding WHVI inference time to a smaller degree, because the workstation used in the experiments of the original paper is significantly more powerful than the one we used in this reproduction study.
 
     \section{Implementation details}\label{sec:implementation-details}
+    In this section, we describe our implementation of the proposed method and list assumptions for parts which were not described in detail in the original paper.
+    We mainly focus on the core classes, parameters, and the prior, but also discuss the fast Walsh-Hadamard transform and weight matrix sampling.
     \subsection{Core classes}\label{subsec:core-classes}
     We implemented WHVI in PyTorch~\cite{pytorch}, because it is also used in the original paper.
     One of the most important parts is the \texttt{WHVISquarePow2Matrix} class, which contains the parameters: elements of $\mathbf{S_1}$, $\mathbf{S_2}$, and the posterior mean $\mu$.
@@ -135,7 +137,7 @@
     The KL divergence of a \texttt{WHVILinear} layer is the sum of KL divergence terms for all of its descendants of type \texttt{WHVIStackedMatrix}.
 
     \subsection{Fast Walsh-Hadamard transform}
-    An important contribution of the paper is the use of Fast Walsh-Hadamard transform (FWHT)~\cite{fino1976unified}, which allows for log-linear vector transformation time.
+    An important contribution of the paper is the use of fast Walsh-Hadamard transform (FWHT)~\cite{fino1976unified}, which allows for log-linear vector transformation time.
     We implemented the transform in Python and C++, both implementations can be used on the CPU and the GPU.
     We also adapted and tested a CUDA kernel implementation, which is considerably faster than the Python and C++ implementations on the GPU, but achieves speeds that are similar to the CPU implementations for $D \approx 2^7$.
     This was also observed by the authors.
@@ -170,16 +172,20 @@
     This agrees with the findings from the original paper.
 
     \section{Running the experiments}\label{sec:running-the-experiments}
-    % TODO describe the details of how the experiments were run
+    In this section, we describe the results of running the original experiments.
+    In particular, we focus on the toy example from Section 3.1 and talk about the found differences.
+    This is because it is easy to experiment on such a small example and observe the method's behavior.
+    Furthermore, some discrepancies on the toy example are already large enough that more complex experimentation is not meaningful.
+    We also list results from regression experiments from Section 3.2.
 
     \subsection{Toy example}\label{sec:toy-example}
-    In this section, we consider the toy example from Section 3.1, Figure 4 in the original paper.
+    We consider the toy example from Section 3.1, Figure 4 in the original paper.
     The authors do not provide an explicit formula for the function.
     To replicate the experiment as closely as possible, we look at the plot and roughly observe some $(x, y)$ pairs -- extrema and in-between values.
     We then use polynomial interpolation with a Vandermonde matrix to obtain a similar-looking function.
     This function is visualized in Figure~\ref{fig:toy-function}.
 
-    \begin{figure}
+    \begin{figure}[h]
         \centering
         \includegraphics[width=1.0\hsize]{img/toy-function.pdf}
         \caption{Polynomial approximation to the toy function in the original paper.
@@ -203,7 +209,7 @@
 
     We trained the model with WHVI layers and found that the results depend heavily on initial $\lambda$ values in each layer as well as the initial scale $\sigma_0$ of the Gaussian likelihood.
     The result is visualized in Figure~\ref{fig:toy-function-whvi}.
-    \begin{figure}
+    \begin{figure}[htbp]
         \centering
         \includegraphics[width=1.0\hsize]{img/bayesian-fit-with-kl.pdf}
         \caption{
@@ -216,7 +222,7 @@
 
     Many parameter choices resulted in slow convergence and significantly underestimated uncertainty.
     Our suggestions are to set $\lambda$ values that get gradually smaller as we approach the output layer and set $\sigma_0$ to be sufficiently larger than zero.
-    In particular, our choices for modeling the toy data set were $\lambda_1=15, \lambda_2=5,\lambda_3=0.1, \sigma_0=5$.
+    In particular, our choices for modeling the toy data set were $\lambda_1=15, \lambda_2=15,\lambda_3=0.01, \sigma_0=5$.
     We also observed that the KL term in ELBO would often be much larger than the MNLL term at the beginning of the optimization. Conversely, the MNLL term would get stuck at suboptimal value and be unable to escape this local minimum even after several thousand epochs.
     After optimization, we observed several times that all but one pair of $\mu$ and $\Sigma$ parameters were almost exactly equal to zero and $\lambda$, indicating that the KL term was too dominant, drawing the variational posterior too close to the prior.
 
@@ -253,11 +259,28 @@
     \label{tab:regression-experiments}
     \end{table*}
     We were unable to reproduce the results, shown in the original paper.
-    We believe that this is due to the missing parameters (see~\ref{sec:toy-example}) and possibly due to different values of $\lambda$.
+    We believe that this is due to the missing parameters (see Subsection~\ref{sec:toy-example}) and possibly due to different values of $\lambda$.
     It is also possible that the authors invested more time into hyperparameter tuning to achieve such results, however we were unable to do the same given the considerable time and computational resources required for the described experiments.
 
     \section{Conclusion and discussion}\label{sec:conclusion-and-discussion}
     % TODO conclude with key findings regarding the reproducibility, discuss own results and authors' results.
+    We implemented Walsh-Hadamard Variational Inference as proposed in the original paper.
+    The main contribution of the method is the significantly reduced number of parameters needed to represent a weight matrix in a Bayesian neural network and the use of the fast Walsh-Hadamard transform for time and space-efficient computations.
+
+    We were not able to reproduce the findings in the original paper with our implementation.
+    We believe that this is primarily because of missing parameters, which we were unable to identify.
+    Another possibility is the choice of hyperparameters, parameter initialization strategies, and prior selection, which could have been discussed somewhat more in the original paper.
+    We realize that some of these details and other common knowledge in variational inference might have been omitted from the published paper and the supplement due to space constraints.
+    Over the course of this reproduction, we were able to find some answers to our questions in the cited papers.
+
+    We contacted the authors regarding the issues and they were kind enough to link the Github repository\footnote{\url{https://github.com/srossi93/vardl}} with some supporting code for the paper.
+    We would like to express our gratitude for this help.
+    While the linked repository contains code for some of the methods, it is still in development and yet to be thoroughly documented.
+    Unfortunately, the notebooks for the studied paper are also not available.
+    Due to time constraints, we cannot study the code in detail at the time of writing.
+    However, after checking some related classes, we saw some procedures that were not described in the paper.
+    For example, there is support for biases in the WHVI layers, but because there are no notebooks, it is unclear which of the experiments used biases and which did not.
+    We will update our code and this report once the authors publish additional materials for the paper.
 
     \bibliographystyle{unsrt}
     \bibliography{bibliography}

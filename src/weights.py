@@ -26,8 +26,8 @@ class WHVISquarePow2Matrix(nn.Module):
         self.wht_slow = wht_matmul()  # In case we need regular matmul, but this does not create H otherwise.
 
         self.bias = nn.Parameter(torch.zeros(1, D)) if bias else None
-        self.s1 = nn.Parameter(torch.randn(D))
-        self.s2 = nn.Parameter(torch.randn(D))
+        self.s1 = nn.Parameter(torch.randn(D) * 0.01)
+        self.s2 = nn.Parameter(torch.randn(D) * 0.01)
         self.g_mu = nn.Parameter(torch.zeros(D))
         self.g_rho = nn.Parameter(torch.rand(D) - 3)
 
