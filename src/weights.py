@@ -35,7 +35,7 @@ class WHVISquarePow2Matrix(nn.Module):
         if x.device.type == "cuda":
             return fwht_cuda.apply(x)
         else:
-            if self.D < 2 ** 11:
+            if self.D < 2 ** 12:
                 return self.wht_slow.apply(x)
             else:
                 return fwht_cpp.apply(x)
