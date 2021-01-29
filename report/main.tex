@@ -24,19 +24,6 @@
 }
 \urlstyle{same}
 
-%\newenvironment{comment}
-%    {
-%    \begin{center}
-%    \begin{tabular}{|p{0.9\hsize}|}
-%    \hline\\
-%    \begin{footnotesize}\textbf{Comment:}}
-%    {
-%    \end{footnotesize}
-%    \\\\\hline
-%    \end{tabular}
-%    \end{center}
-%    }
-
 \newenvironment{disclaimer}
     {
     \begin{center}
@@ -101,11 +88,13 @@
     If our results vary significantly from the original ones, we will attempt to tune hyperparameters and report on the necessary changes.
     We will test the method across different random seeds to empirically assess stability and convergence.
 
-    Due to empirically long training times for Bayesian neural networks, complex convolutional neural network architectures and the large number of parameters ($\sim 2.3$M), we will not be considering image clasification experiments in this report.
+    Due to long training times for Bayesian neural networks, complex convolutional neural network architectures and the large number of parameters ($\sim 2.3$M), we will not be considering image clasification experiments in this report.
     We also believe they are not crucial to assessing the quality of the proposed approach.
     This is because the linear layers (not involving convolution operations) are already evaluated using standard regression and classification data sets, whereas the authors report that using WHVI for convolutional filters does not yield interesting results due to the small number of parameters.
+    We will only focus on mean-field WHVI and not on the version involving normalizing flows, because these are mentioned as an extension to the proposed method.
 
     We will attempt to reproduce the findings regarding WHVI inference time to a smaller degree, because the workstation used in the experiments of the original paper is significantly more powerful than the one we used in this reproduction study.
+    We will compare the speed of matrix multiplication and fast Walsh-Hadamard transform on the CPU and the GPU, but not the experiments regarding energy consumption.
 
     \section{Implementation details}\label{sec:implementation-details}
     In this section, we describe our implementation of the proposed method and list assumptions for parts which were not described in detail in the original paper.
@@ -141,6 +130,8 @@
     We implemented the transform in Python and C++, both implementations can be used on the CPU and the GPU.
     We also adapted and tested a CUDA kernel implementation, which is considerably faster than the Python and C++ implementations on the GPU, but achieves speeds that are similar to the CPU implementations for $D \approx 2^7$.
     This was also observed by the authors.
+
+    % TODO speed comparison plots
 
     \subsection{Priors and parameter initializations}
     According to the supplementary material for the original paper, we use a zero-mean prior with fully factorized covariance $\lambda \mathbf{I}$ for a particular layer, i.e. $\mathcal{N}(\mathbf{0}, \mathrm{diag}(\lambda, \dots, \lambda)$ for a chosen $\lambda > 0$.
@@ -235,6 +226,7 @@
     To conclude, we were not able to reproduce the uncertainty estimates, visualized in Figure 4 of the original paper.
     We suggest further research regarding parameter initialization.
     A possible solution would be to explore hyperpriors for $\mu$ and $\rho$ to allow for greater flexibility in the sampled weights.
+    We found the choice of random seed not to improve results by observing the fit with seeds $5000k, k = \{1, \dots, 10\}$.
 
     \subsection{Regression experiments}
     This section refers to experiments in section 3.2, Table 3 of the original paper.
@@ -244,26 +236,27 @@
 
     The comparison between our results and the ones from the paper are presented in Table~\ref{tab:regression-experiments}.
     \begin{table*}[]
-    \begin{tabular}{l|llll}
-               & RMSE (original) & RMSE (ours) & { }MNLL (original) & MNLL (ours) \\ \hline
-    Boston     & 3.14 (0.71)     &             & { }4.33 (1.80)     &             \\
-    Concrete   & 4.70 (0.72)     &             & { }3.17 (0.37)     &             \\
-    Energy     & 0.58 (0.07)     &             & { }2.00 (0.60)     &             \\
-    KIN8NM     & 0.08 (0.00)     &             & -1.19 (0.04)       &             \\
-    Naval      & 0.01 (0.00)     &             & -6.25 (0.01)       &             \\
-    Powerplant & 4.00 (0.12)     &             & { }2.71 (0.03)     &             \\
-    Protein    & 4.36 (0.11)     &             & { }2.79 (0.01)     &             \\
-    Yacht      & 0.69 (0.16)     &             & { }1.80 (1.01)     &
-    \end{tabular}
-    \caption{WHVI regression experiments results. RMSE and MNLL are computed on test data sets. The result format is \textit{mean (std)}, where the sample mean and standard deviation are computed across 8 independent random train-test splits of the data sets.}
-    \label{tab:regression-experiments}
+        \begin{tabular}{l|llll}
+                   & RMSE (original) & RMSE (ours) & { }MNLL (original) & MNLL (ours) \\ \hline
+        Boston     & 3.14 (0.71)     &             & { }4.33 (1.80)     &             \\
+        Concrete   & 4.70 (0.72)     &             & { }3.17 (0.37)     &             \\
+        Energy     & 0.58 (0.07)     &             & { }2.00 (0.60)     &             \\
+        KIN8NM     & 0.08 (0.00)     &             & -1.19 (0.04)       &             \\
+        Naval      & 0.01 (0.00)     &             & -6.25 (0.01)       &             \\
+        Powerplant & 4.00 (0.12)     &             & { }2.71 (0.03)     &             \\
+        Protein    & 4.36 (0.11)     &             & { }2.79 (0.01)     &             \\
+        Yacht      & 0.69 (0.16)     &             & { }1.80 (1.01)     &
+        \end{tabular}
+        \caption{WHVI regression experiments results. RMSE and MNLL are computed on test data sets. The result format is \textit{mean (std)}, where the sample mean and standard deviation are computed across 8 independent random train-test splits of the data sets.}
+        \label{tab:regression-experiments}
     \end{table*}
     We were unable to reproduce the results, shown in the original paper.
     We believe that this is due to the missing parameters (see Subsection~\ref{sec:toy-example}) and possibly due to different values of $\lambda$.
     It is also possible that the authors invested more time into hyperparameter tuning to achieve such results, however we were unable to do the same given the considerable time and computational resources required for the described experiments.
 
+    % TODO report training time
+
     \section{Conclusion and discussion}\label{sec:conclusion-and-discussion}
-    % TODO conclude with key findings regarding the reproducibility, discuss own results and authors' results.
     We implemented Walsh-Hadamard Variational Inference as proposed in the original paper.
     The main contribution of the method is the significantly reduced number of parameters needed to represent a weight matrix in a Bayesian neural network and the use of the fast Walsh-Hadamard transform for time and space-efficient computations.
 

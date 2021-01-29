@@ -1,7 +1,7 @@
 import unittest
 import torch
 from src.utils import build_H
-from fwht.cpp.fwht import FWHTFunction
+from src.fwht.cpp.fwht import FWHTFunction
 
 
 class WalshHadamard(unittest.TestCase):

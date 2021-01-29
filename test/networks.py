@@ -3,7 +3,7 @@ import unittest
 import torch
 import torch.nn as nn
 
-from layers import WHVILinear
+from src.layers import WHVILinear
 from src.networks import WHVIRegression
 
 
@@ -12,7 +12,7 @@ class RegressionTestCase(unittest.TestCase):
         for k in range(1, 21):
             device = torch.device("cpu")
             net = WHVIRegression([
-                nn.Linear(1, 8), nn.ReLU(), WHVILinear(8, 8, device=device), nn.ReLU(), nn.Linear(8, k)
+                nn.Linear(1, 8), nn.ReLU(), WHVILinear(8, 8), nn.ReLU(), nn.Linear(8, k)
             ], train_samples=5, eval_samples=6)
 
             net.train()
