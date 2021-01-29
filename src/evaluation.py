@@ -77,9 +77,9 @@ def evaluate_bayesian_regression_dnn(X: np.ndarray, y: np.ndarray, device, check
 
         # Set up the model
         model = WHVIRegression([
-            WHVILinear(X_test.size()[1], 128, lambda_=15.0),
+            WHVILinear(X_test.size()[1], 128, lambda_=3.0),
             nn.ReLU(),
-            WHVILinear(128, 128, lambda_=15.0),
+            WHVILinear(128, 128, lambda_=3.0),
             nn.ReLU(),
             WHVILinear(128, y_test.size()[1])
         ], eval_samples=64)
