@@ -6,7 +6,7 @@ import torch.nn.functional as F
 from src.utils import matmul_diag_left, kl_diag_normal
 
 from src.fwht.cuda.fwht import FWHTFunction as fwht_cuda
-from src.fwht.cpp.fwht import FWHTFunction as fwht_cpp
+from src.fwht.python.fwht_baseline import FWHTFunction as fwht_python
 from src.fwht.python.fwht import WHT_matmul as wht_matmul
 
 
@@ -38,7 +38,7 @@ class WHVISquarePow2Matrix(nn.Module):
             if self.D < 2 ** 12:
                 return self.wht_slow.apply(x)
             else:
-                return fwht_cpp.apply(x)
+                return fwht_python.apply(x)
 
     @property
     def g_sigma(self):
