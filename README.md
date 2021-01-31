@@ -70,4 +70,3 @@ We show progress bars during model training using tqdm.
 * [Variational Deep Learning package](https://github.com/srossi93/vardl) (code implementation by the original authors)
 * S. Rossi, S. Marmin, and M. Filippone (2019). [Walsh-Hadamard Variational Inference for Bayesian Deep Learning.](https://arxiv.org/abs/1905.11248) *arXiv preprint arXiv:1905.11248*  
 * S. Rossi, S. Marmin, and M. Filippone (2019). \[Direct link\] [Supplementary material for "Walsh-Hadamard Variational Inference for Bayesian Deep Learning"](https://www.eurecom.fr/fr/publication/6398/download/data-publi-6398.pdf)
-* [HazyResearch/structured-nets repository](https://github.com/HazyResearch/structured-nets/tree/master/pytorch) (source code for the Fast Walsh-Hadamard transform CUDA kernel)
