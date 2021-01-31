@@ -4,7 +4,7 @@ from src.utils import build_H
 
 import src.fwht.cpp.fwht as cpp_fwht
 import src.fwht.cuda.fwht as cuda_fwht
-import src.fwht.python.fwht_baseline as python_fwht
+import src.fwht.python.fwht as python_fwht
 
 
 class WalshHadamard(unittest.TestCase):
@@ -27,6 +27,16 @@ class WalshHadamard(unittest.TestCase):
             reference = (H @ a.T).T
             a = cpp_fwht.FWHTFunction.apply(a)
             self.assertTrue(torch.allclose(a, reference, atol=1e-5))
+
+    def test_slow_WHT(self):
+        device = torch.device('cpu')
+        D = 2 ** 5
+        batch_size = 40
+        A = torch.randn(batch_size, D, device=device)
+        ret1 = python_fwht.WHT_matmul().apply(A)
+        H = build_H(D, device)
+        ret2 = (H @ A.T).T
+        self.assertTrue(torch.allclose(ret1, ret2))
 
     def test_matrix_random(self):
         D = 2 ** 5

@@ -13,7 +13,7 @@ parser.add_argument('-c', '--cuda', action='store_true')
 options = parser.parse_args()
 
 if options.example == 'py':
-    from python.fwht_baseline import FWHTFunction
+    from python.fwht import FWHTFunction
 elif options.example == 'cpp':
     from cpp.fwht import FWHTFunction
 else:

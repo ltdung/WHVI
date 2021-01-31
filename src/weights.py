@@ -6,7 +6,7 @@ import torch.nn.functional as F
 from src.utils import matmul_diag_left, kl_diag_normal
 
 from src.fwht.cuda.fwht import FWHTFunction as fwht_cuda
-from src.fwht.python.fwht_baseline import FWHTFunction as fwht_python
+from src.fwht.python.fwht import FWHTFunction as fwht_python
 from src.fwht.python.fwht import WHT_matmul as wht_matmul
 
 

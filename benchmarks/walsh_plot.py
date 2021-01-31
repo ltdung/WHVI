@@ -7,7 +7,7 @@ from matplotlib import rc
 from src.utils import build_H
 
 import src.fwht.cpp.fwht as cpp_fwht
-import src.fwht.python.fwht_baseline as python_fwht
+import src.fwht.python.fwht as python_fwht
 import src.fwht.cuda.fwht as cuda_fwht
 
 """

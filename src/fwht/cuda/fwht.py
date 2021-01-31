@@ -4,7 +4,7 @@ import fwht_cuda
 
 class FWHTFunction(Function):
     """
-    The un-normalized Hadamard transform (i.e. without dividing by sqrt(2)).
+    Python frontend for batched FWHT on the GPU (CUDA).
     """
 
     @staticmethod

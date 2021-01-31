@@ -5,6 +5,10 @@ import fwht_cpp
 
 
 class FWHTFunction(Function):
+    """
+    Python frontend for the batched FWHT C++ implementation.
+    """
+
     @staticmethod
     def forward(ctx, x):
         return fwht_cpp.forward(x)
@@ -15,6 +19,10 @@ class FWHTFunction(Function):
 
 
 class FWHT(nn.Module):
+    """
+    Python frontend for the batched FWHT C++ implementation as a torch module.
+    """
+
     def __init__(self):
         super(FWHT, self).__init__()
 
