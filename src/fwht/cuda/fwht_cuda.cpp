@@ -1,15 +1,14 @@
 #include <torch/extension.h>
 
-void fwtBatchGPU(float* x, int batchSize, int log2N);
+at::Tensor fwht_cuda_frontend(at::Tensor X);
 
-torch::Tensor fwht(torch::Tensor x) {
-  TORCH_CHECK(x.device().type() == torch::kCUDA, "x must be a CUDA tensor");
-  auto n = x.size(-1);
+at::Tensor fwht(at::Tensor X) {
+  TORCH_CHECK(X.device().type() == torch::kCUDA, "X must be a CUDA tensor");
+  auto n = X.size(-1);
   auto log2N = long(log2(n));
   TORCH_CHECK(n == 1 << log2N, "n must be a power of 2");
-  auto output = x.clone();  // Cloning makes it contiguous.
-  auto batchSize = x.numel() / (1 << log2N);
-  fwtBatchGPU(output.data_ptr<float>(), batchSize, log2N);
+  auto output = X.clone();  // Cloning makes it contiguous.
+  fwht_cuda_frontend(output);
   return output;
 }
 

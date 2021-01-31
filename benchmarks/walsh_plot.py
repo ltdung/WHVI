@@ -5,11 +5,9 @@ import matplotlib.pyplot as plt
 
 from src.utils import build_H
 
-import src.fwht.python.fwht_baseline as python_fwht_module
-import src.fwht.cuda.fwht as cuda_fwht_module
-
-# python_fwht = lambda x: python_fwht_module.FWHTFunction.apply(x)
-# cuda_fwht = lambda x: cuda_fwht_module.FWHTFunction.apply(x)
+import src.fwht.cpp.fwht as cpp_fwht
+import src.fwht.cuda.fwht as cuda_fwht
+import src.fwht.python.fwht_baseline as python_fwht
 
 """
 Measure speed of matrix multiplication and fast Walsh-Hadamard transform (Python and C++ implementations) on the CPU.
@@ -20,6 +18,7 @@ The output are plots of computation time as a function of matrix size parameter 
 
 torch.manual_seed(0)
 n_samples = 1
+n_features = 64
 batch_size = 512
 log2D_list = list(range(6, 14))
 
@@ -31,7 +30,7 @@ cpu_fwht_python_times = []
 for p in log2D_list:
     print(p)
     D = 2 ** p
-    A = torch.randn(batch_size, D, 1, device=device)
+    A = torch.randn(batch_size, D, n_features, device=device)
     H = build_H(D, device)
 
     # Matrix multiplication
@@ -45,7 +44,7 @@ for p in log2D_list:
     python_time = 0
     for _ in range(n_samples):
         t0 = time.time()
-        python_fwht_module.FWHTFunction.apply(A)
+        python_fwht.FWHTFunction.apply(A)
         python_time += time.time() - t0
     python_time /= n_samples
 
@@ -65,7 +64,7 @@ torch.randn(2, 2, device=device) @ torch.randn(2, 2, device=device)
 for p in log2D_list:
     print(p)
     D = 2 ** p
-    A = torch.randn(batch_size, D, 1, device=device)  # batch_size vectors, each of size D
+    A = torch.randn(batch_size, D, n_features, device=device)  # batch_size vectors, each of size D
     H = build_H(D, device)
 
     # Matrix multiplication
@@ -79,7 +78,7 @@ for p in log2D_list:
     cuda_time = 0
     for _ in range(n_samples):
         t0 = time.time()
-        cuda_fwht_module.FWHTFunction.apply(A)
+        cpp_fwht.FWHTFunction.apply(A)
         cuda_time += time.time() - t0
     cuda_time /= n_samples
 
