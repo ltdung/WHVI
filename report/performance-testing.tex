@@ -1,4 +1,12 @@
 % Present results
 % Explain results
 
-In this section, we discuss the computational efficiency of our implementation of WHVI and FWHT.
+In this section, we discuss the computational efficiency of our implementation of WHVI and FWHT\@.
+
+% It is not clear from the original paper to what extent the in-place version of FWHT was utilized.
+% We found that using in-place operations caused problems in the PyTorch autodifferentiation engine so that the computed gradient was incorrect.
+% We consequently cloned the input batch before using the transform, but this did not noticeably decrease processing speed.
+
+The CUDA implementation of FWHT was not explained in the original paper or the supplement.
+We adapted an implementation of the kernel from the original paper\footnote{See the author's repository at \url{https://github.com/srossi93/vardl} and a somewhat different implementation of the transform at \url{https://github.com/HazyResearch/structured-nets}.} and used it in our experiments.
+We suggest reading the paper by Bikov and Bouyukliev (2018)~\cite{bikov2018parallel} for a clear and concise FWHT implementation reference, as well as the detailed implementation strategies, described by Arndt (2010)~\cite{arndt2010matters}.
