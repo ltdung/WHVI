@@ -12,7 +12,7 @@ class FWHTFunction(Function):
         while h < n:
             for i in range(0, n, h * 2):
                 for j in range(i, i + h):
-                    y[:, j, :], y[:, j + h, :] = y[:, j, :] + y[:, j + h, :], y[:, j, :] - y[:, j + h, :]
+                    y[:, j], y[:, j + h] = y[:, j] + y[:, j + h], y[:, j] - y[:, j + h]
             h *= 2
         return y
 

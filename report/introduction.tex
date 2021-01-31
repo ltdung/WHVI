@@ -1,0 +1,41 @@
+In this report, we assess the reproducibility of the paper ``Walsh-Hadamard Variational Inference for Bayesian Deep Learning''~\cite{rossi2019walsh}.
+Our results are based on multiple readings of the original paper and its supplementary material, re-runs of the described experiments, as well as some key referenced literature~\cite{le2014fastfood, blundell2015weight, fino1976unified, kingma2015variational, rossi2019good}.
+This reproduction is not based on any published code, except the CUDA implementation of the fast Walsh Hadamard transform by the paper's authors.
+Our implementation of the proposed method, experiments and other related files are available at \url{https://github.com/davidnabergoj/WHVI}.
+
+\subsection{Brief review of the paper}\label{subsec:brief-review-of-the-paper}
+The authors propose Walsh-Hadamard Variational Inference (WHVI), where weight matrices in Bayesian neural networks are efficiently re-parameterized to allow for linear space complexity and log-linear time complexity when transforming an input vector with a WHVI layer.
+The key idea is that weight matrices can be efficiently sampled by
+\begin{align}
+    \widetilde{\mathbf{W}} = \mathbf{S_1} \mathbf{H} \mathrm{diag}(\widetilde{\mathbf{g}}) \mathbf{H} \mathbf{S_2},\quad\widetilde{\mathbf{g}} \sim q(\mathbf{g}).
+    \label{eqn:weight-sampling}
+\end{align}
+Here, $\widetilde{\mathbf{W}}$ is a $D \times D$ weight matrix sample, $\mathbf{S_1}$ and $\mathbf{S_2}$ are deterministic diagonal matrices whose entries need to be optimized, $\mathbf{H}$ is the Walsh-Hadamard matrix, and $\widetilde{\mathbf{g}}$ is a sample from the distribution $q$.
+The variational posterior distribution $q$ is a multivariate normal distribution with a diagonal covariance matrix, i.e.\ $q(\mathbf{g}) = \mathcal{N}(\mathbf{\mu}, \mathbf{\Sigma})$.
+
+This approach offers an advantage over other approaches like Mean field Gaussian variational inference, because it requires $O(D)$ instead of $O(D^2)$ parameters to represent weight matrices of size $D \times D$.
+Furthermore, the matrix-vector product $\mathbf{Hx}$ can be computed in $O(D \log D)$ time and $O(1)$ space using the in-place version of the Fast Walsh-Hadamard transform.
+The described approach supports matrices of size $D \times D$ where $D = 2^p$ for $p > 0$ in its most basic form, however it is extended to support matrices of arbitrary size by concatenating smaller square matrices.
+
+WHVI is applied to a toy example, several regression data sets, and is also tested on image classification tasks using Bayesian convolutional neural networks.
+
+\subsection{Reproducibility goals}\label{subsec:reproducibility-goals}
+Our main goal is to implement all required procedures for WHVI and run the described experiments.
+
+We first try to reproduce results for the toy univariate regression example in section 3.1 of the original report.
+This primarily means obtaining qualitatively similar uncertainty estimates.
+We then focus on the regression data sets, as listed in Table 3 of the original report.
+The goal is to obtain similar WHVI test error and WHVI test MNLL (mean negative log-likelihood) estimates, both the mean and the standard deviation.
+
+Due to long training times for Bayesian neural networks, complex convolutional neural network architectures, and the large number of parameters ($\sim 2.3$M), we do not consider image classification experiments in this report.
+We believe they are not crucial to assessing the quality of the proposed approach, because linear layers (not involving convolution operations) are already evaluated using standard regression data sets, whereas the authors report that using WHVI for convolutional filters does not yield interesting results due to the small number of parameters.
+We focus only on mean-field WHVI and not on the version involving normalizing flows, which are mentioned as an extension to the proposed method.
+
+We attempt to reproduce the findings regarding WHVI inference time to a smaller degree, because the workstation used in the experiments of the original paper is significantly more powerful than the one we used in this reproduction study.
+We compare the speed of matrix multiplication and fast Walsh-Hadamard transform on the CPU and the GPU, but not the experiments regarding energy consumption.
+We test the method across different random seeds to empirically assess stability and convergence.
+
+\subsection{Report structure}\label{subsec:report-structure}
+We describe our implementation of the proposed method in Section~\ref{sec:implementation-details}.  % TODO say more
+We compare our results to those in the original paper in Section~\ref{sec:model-testing}, where we discuss the inference process, predictive quality, and compute performance.
+In Section~\ref{sec:conclusion-and-discussion}, we conclude the report with an overall reproducibility assessment provide some suggestions for improvement.

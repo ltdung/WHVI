@@ -1,0 +1,17 @@
+We implemented Walsh-Hadamard Variational Inference as proposed in the original paper.
+The main contribution of the method is the significantly reduced number of parameters needed to represent a weight matrix in a Bayesian neural network and the use of the fast Walsh-Hadamard transform for time and space-efficient computations.
+
+We were not able to reproduce the findings in the original paper with our implementation.
+We believe that this is primarily because of missing parameters, which we were unable to identify.
+Another possibility is the choice of hyperparameters, parameter initialization strategies, and prior selection, which could have been discussed somewhat more in the original paper.
+We realize that some of these details and other common knowledge in variational inference might have been omitted from the published paper and the supplement due to space constraints.
+Over the course of this reproduction, we were able to find some answers to our questions in the cited papers.
+
+We contacted the authors regarding the issues and they were kind enough to link the Github repository\footnote{\url{https://github.com/srossi93/vardl}} with some supporting code for the paper.
+We would like to express our gratitude for this help.
+While the linked repository contains code for some methods, it is still in development and yet to be thoroughly documented.
+Unfortunately, the notebooks for the studied paper are also not available.
+Due to time constraints, we cannot study the code in detail at the time of writing.
+However, after checking some related classes, we saw some procedures that were not described in the paper.
+For example, there is support for biases in the WHVI layers, but because there are no notebooks, it is unclear which of the experiments used biases and which did not.
+We will update our code and this report once the authors publish additional materials for the paper.

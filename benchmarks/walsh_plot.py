@@ -7,7 +7,6 @@ from src.utils import build_H
 
 import src.fwht.cpp.fwht as cpp_fwht
 import src.fwht.cuda.fwht as cuda_fwht
-import src.fwht.python.fwht_baseline as python_fwht
 
 """
 Measure speed of matrix multiplication and fast Walsh-Hadamard transform (Python and C++ implementations) on the CPU.
@@ -16,89 +15,69 @@ Measure speed of matrix multiplication and fast Walsh-Hadamard transform with CU
 The output are plots of computation time as a function of matrix size parameter D.
 """
 
-torch.manual_seed(0)
-n_samples = 1
-n_features = 64
+n_samples = 30
 batch_size = 512
+
+def time_mm(D, device):
+    with torch.no_grad():
+        A = torch.randn(batch_size, D, device=device)
+        H = build_H(D, device=device)
+
+        # One run so we initialize things, get stable results
+        ret = (H @ A.T).T
+
+        total_time = 0
+        for _ in range(n_samples):
+            A = torch.randn(batch_size, D, device=device)
+            t0 = time.time_ns()
+            ret = (H @ A.T).T
+            t1 = time.time_ns()
+            dt = t1 - t0
+            total_time += dt
+        return total_time
+
+
+def time_fwht(D, device, fwht_fun):
+    with torch.no_grad():
+        # One run so we initialize things, get stable results
+        A = torch.randn(batch_size, D, device=device)
+        torch.cuda.synchronize()
+        ret = fwht_fun(A)
+
+        t0 = time.time_ns()
+        for _ in range(n_samples):
+            ret = fwht_fun(A)
+        t1 = time.time_ns()
+        return t1 - t0
+
+
+torch.manual_seed(0)
 log2D_list = list(range(6, 14))
 
-# CPU test
-device = torch.device('cpu')
-cpu_matmul_times = []
-cpu_fwht_python_times = []
+matmul_cpu_times = [time_mm(2 ** p, torch.device('cpu')) for p in log2D_list]
+matmul_gpu_times = [time_mm(2 ** p, torch.device('cuda')) for p in log2D_list]
+print(matmul_cpu_times)
+print(matmul_gpu_times)
 
-for p in log2D_list:
-    print(p)
-    D = 2 ** p
-    A = torch.randn(batch_size, D, n_features, device=device)
-    H = build_H(D, device)
-
-    # Matrix multiplication
-    matmul_time = 0
-    for _ in range(n_samples):
-        t0 = time.time()
-        torch.stack([H @ A[i] for i in range(batch_size)])
-        matmul_time += time.time() - t0
-    matmul_time /= n_samples
-
-    python_time = 0
-    for _ in range(n_samples):
-        t0 = time.time()
-        python_fwht.FWHTFunction.apply(A)
-        python_time += time.time() - t0
-    python_time /= n_samples
-
-    cpu_fwht_python_times.append(python_time)
-    cpu_matmul_times.append(matmul_time)
-
-# The python and C++ implementations have the same speed
-
-# GPU test
-device = torch.device('cuda')
-gpu_matmul_times = []
-gpu_fwht_cuda_times = []
-
-# Initialize CUDA
-torch.randn(2, 2, device=device) @ torch.randn(2, 2, device=device)
-
-for p in log2D_list:
-    print(p)
-    D = 2 ** p
-    A = torch.randn(batch_size, D, n_features, device=device)  # batch_size vectors, each of size D
-    H = build_H(D, device)
-
-    # Matrix multiplication
-    matmul_time = 0
-    for _ in range(n_samples):
-        t0 = time.time()
-        torch.stack([H @ A[i] for i in range(batch_size)])
-        matmul_time += time.time() - t0
-    matmul_time /= n_samples
-
-    cuda_time = 0
-    for _ in range(n_samples):
-        t0 = time.time()
-        cpp_fwht.FWHTFunction.apply(A)
-        cuda_time += time.time() - t0
-    cuda_time /= n_samples
-
-    gpu_fwht_cuda_times.append(cuda_time)
-    gpu_matmul_times.append(matmul_time)
+fwht_cpu_times = [time_fwht(2 ** p, torch.device('cpu'), cpp_fwht.FWHTFunction.apply) for p in log2D_list]
+fwht_gpu_times = [time_fwht(2 ** p, torch.device('cuda'), cuda_fwht.FWHTFunction.apply) for p in log2D_list]
+print(fwht_cpu_times)
+print(fwht_gpu_times)
 
 plt.figure()
-plt.plot(log2D_list, cpu_matmul_times, label='matmul (CPU)')
-plt.plot(log2D_list, cpu_fwht_python_times, label='FWHT (CPU)')
-plt.plot(log2D_list, gpu_matmul_times, label='matmul (GPU)')
-plt.plot(log2D_list, gpu_fwht_cuda_times, label='FWHT (GPU)')
+plt.plot(log2D_list, matmul_cpu_times, label='matmul (CPU)')
+plt.plot(log2D_list, fwht_cpu_times, label='FWHT (CPU)')
+plt.plot(log2D_list, matmul_gpu_times, label='matmul (GPU)')
+plt.plot(log2D_list, fwht_gpu_times, label='FWHT (GPU)')
 plt.title('Regular-scale computation time comparison')
 plt.legend()
 plt.show()
 
 plt.figure()
-plt.plot(log2D_list, np.log1p(cpu_matmul_times), label='matmul (CPU)')
-plt.plot(log2D_list, np.log1p(cpu_fwht_python_times), label='FWHT (CPU)')
-plt.plot(log2D_list, np.log1p(gpu_matmul_times), label='matmul (GPU)')
-plt.plot(log2D_list, np.log1p(gpu_fwht_cuda_times), label='FWHT (GPU)')
+plt.plot(log2D_list, np.log1p(matmul_cpu_times), label='matmul (CPU)')
+plt.plot(log2D_list, np.log1p(fwht_cpu_times), label='FWHT (CPU)')
+plt.plot(log2D_list, np.log1p(matmul_gpu_times), label='matmul (GPU)')
+plt.plot(log2D_list, np.log1p(fwht_gpu_times), label='FWHT (GPU)')
 plt.yscale('log')
 plt.title('Log-scale computation time comparison')
 plt.legend()

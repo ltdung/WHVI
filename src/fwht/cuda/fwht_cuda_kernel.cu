@@ -25,7 +25,7 @@
 
 
 // ELEMENTARY_LOG2SIZE can be changed to another positive integer.
-#define ELEMENTARY_LOG2SIZE 11
+#define ELEMENTARY_LOG2SIZE 14
 
 
 /*
@@ -154,7 +154,7 @@ Creates the grid and launches kernels.
 :return: overwritten tensor X with the result of batched FWHT.
 */
 at::Tensor fwht_cuda_frontend(at::Tensor X) {
-	const int num_threads = 256;  // This can be changed to a different power of two.
+	const int num_threads = 1024;  // This can be changed to a different power of two.
 
 	auto shape = X.sizes();
 	int batch_size = shape[0];
