@@ -1,3 +1,4 @@
+import math
 from torch.autograd import Function
 import torch
 import torch.nn as nn
@@ -5,16 +6,14 @@ import torch.nn as nn
 
 class FWHTFunction(Function):
     @staticmethod
-    def transform(x):
-        n = x.size(1)
-        h = 1
-        y = torch.clone(x)
-        while h < n:
-            for i in range(0, n, h * 2):
-                for j in range(i, i + h):
-                    y[:, j], y[:, j + h] = y[:, j] + y[:, j + h], y[:, j] - y[:, j + h]
-            h *= 2
-        return y
+    def transform(u):
+        n = u.shape[-1]
+        m = int(math.log2(n))
+        x = u.unsqueeze(-1)
+        for _ in range(m)[::-1]:
+            x = torch.cat((x[..., ::2, :] + x[..., 1::2, :], x[..., ::2, :] - x[..., 1::2, :]), dim=-1)
+        x = x.squeeze(-2)
+        return x
 
     @staticmethod
     def forward(ctx, x):
