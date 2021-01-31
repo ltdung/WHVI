@@ -5,11 +5,11 @@ We first focus on the toy example from Section 3.1 and then discuss regression e
 \subsection{Toy example}\label{subsec:toy-example}
 We consider the toy example from Section 3.1 in the original paper.
 The authors do not provide an explicit formula for the function.
-To replicate the experiment as closely as possible, we look at the plot and roughly observe some $(x, y)$ pairs -- extrema and in-between values.
+To replicate the experiment as closely as possible, we look at the plot and roughly observe some $(x, y)$ pairs -- extrema and points between them.
 We then use polynomial interpolation with a Vandermonde matrix to obtain a similar-looking function.
 This function is visualized in Figure~\ref{fig:toy-function}.
 
-\begin{figure}[h]
+\begin{figure}[htb]
     \centering
     \includegraphics[width=1.0\hsize]{img/toy-function}
     \caption{Polynomial approximation to the toy function in the original paper.
@@ -24,7 +24,7 @@ We check this by training a non-Bayesian model, which has the exact same archite
 We found that the sigmoid activation performs slightly better and decided to use it in the WHVI experiment instead.
 A comparison of the two non-Bayesian models with different activations can be seen in Figure~\ref{fig:toy-function-non-bayesian}.
 
-\begin{figure}
+\begin{figure}[htb]
     \centering
     \includegraphics[width=1.0\hsize]{img/toy-function-non-bayesian}
     \caption{Comparison of the cosine and the sigmoid activation in a non-bayesian network.
@@ -46,15 +46,17 @@ The result is visualized in Figure~\ref{fig:toy-function-whvi}.
 \end{figure}
 
 Many parameter choices resulted in slow convergence and significantly underestimated uncertainty.
-Our suggestions are to set $\lambda$ values that get gradually smaller as we approach the output layer and set $\sigma_0$ to be sufficiently larger than zero.
-In particular, our choices for modeling the toy data set were $\lambda_1=15, \lambda_2=15,\lambda_3=0.01, \sigma_0=5$.
-We also observed that the KL term in ELBO would often be much larger than the MNLL term at the beginning of the optimization.
+We suggest setting $\lambda$ to values close to $1$ and set $\sigma_0$ to be sufficiently larger than zero.\footnote{We base this on empirical observations for this toy example, but it should theoretically not affect the sampled weight matrix too much. This is because the weight matrix is computed using optimized matrices $\mathbf{S}_1$ and $\mathbf{S}_2$ which should adjust for suitable results.}
+In particular, our choices for modeling the toy data set were $\lambda_1=1, \lambda_2=2.5,\lambda_3=5, \sigma_0=5$.
+When setting $\lambda_3$ to $10^{-5}$ as proposed in the paper, the predicted value was just the mean.
+We observed that the KL term in ELBO would often be much larger than the MNLL term at the beginning of the optimization.
 Conversely, the MNLL term would get stuck at suboptimal value and be unable to escape this local minimum even after several thousand epochs.
-After optimization, we observed several times that all but one pair of $\mu$ and $\Sigma$ parameters were almost exactly equal to zero and $\lambda$, indicating that the KL term was too dominant, drawing the variational posterior too close to the prior.
+After optimization, we observed several times that all but one pair of $\mu$ and $\Sigma$ parameters were almost exactly equal to zero and $\lambda$.
+This suggested that the KL term was too dominant and drew the variational posterior too close to the prior.
 
 The authors also state that they obtained a model with 1541 parameters for the toy example, however we obtained one with 1537 parameters.
 We were not able to identify the missing parameters and we believe that they are not hyperparameters, because the authors refer to hyperparameters separately in a Supplement section (i.e.\ not as ``parameters'').
-These missing parameters might be the solution to the observed problems in our experiments.
+We believe that these missing parameters are the primary reason for the observed problems in our experiments, since experimenting with a wide variety of different settings and initializations for $\lambda_i, \sigma_0, \rho, \mathbf{S}_1$, and $\mathbf{S}_2$ did not improve the results.
 
 As an attempt to improve performance, we added bias columns (to be optimized) to WHVI layers.
 This addition was not enough to obtain the desired results and also introduced a considerably large number of additional parameters.
@@ -72,18 +74,18 @@ We choose $\lambda = 3$ for all previous layers.
 The comparison between our results and the ones from the paper are presented in Table~\ref{tab:regression-experiments}.
 \begin{table*}[]
     \begin{tabular}{l|llll}
-               & RMSE (original) & RMSE (ours) & { }MNLL (original) & MNLL (ours) \\ \hline
+               & Original RMSE  & Our RMSE &  Original MNLL  & Our MNLL \\ \hline
     Boston     & 3.14 (0.71)     & 11.97 (0.64) & { }4.33 (1.80)     & 24188 (15730) \\
     Concrete   & 4.70 (0.72)     & 19.15 (1.21) & { }3.17 (0.37)     & 47347 (45087) \\
     Energy     & 0.58 (0.07)     & 15.54 (3.36) & { }2.00 (0.60)     & 45671 (23931) \\
-    KIN8NM^*   & 0.08 (0.00)     & { }1.74 (NA) & -1.19 (0.04)       & 11343 (NA) \\
-    Yacht      & 0.69 (0.16)     &              & { }1.80 (1.01)     &
+    KIN8NM^*   & 0.08 (0.00)     & { }\,1.74 (NA) & -1.19 (0.04)       & 11343 (NA) \\
+    Yacht      & 0.69 (0.16)     & 16.46 (2.25) & { }1.80 (1.01)     & 3719 { }\,(956)
     \end{tabular}
     \caption{
         WHVI regression experiments results.
         RMSE and MNLL are computed on test data sets.
         The result format is \textit{mean (std)}, where the sample mean and standard deviation are computed across 8 independent random train-test splits of the data sets.
-        We used $\lambda_1=\lambda_2=15,\lambda_3=10^{-5}$ on the Boston and Concrete data sets, and $\lambda_1=\lambda_2=3,\lambda_3=10^{-5}$ for others.
+        We used $\lambda_1=\lambda_2=3,\lambda_3=10^{-5}$ on all data sets.
         We only ran KIN8NM for one iteration that took 35 hours, however it was clear from this result and the others that the described method will not achieve the necessary results.
         For this reason, we also skipped the Naval, Power plant, and Protein data sets.
     }
@@ -92,4 +94,4 @@ The comparison between our results and the ones from the paper are presented in 
 
 We believe that the discrepancies are due to the missing parameters (see Subsection~\ref{subsec:toy-example}) and possibly due to different values of $\lambda$.
 It is also possible that the authors invested more time into hyperparameter tuning to achieve such results, however we were unable to do the same given the considerable time and computational resources required for the experiments.
-We do not evaluate WHVI performance further, because it is clear that the lack of parameters and/or the choice prior initializations are causing poor results.
+We do not evaluate WHVI performance further, because it is clear that the missing parameters, as well as the choice prior and parameter initializations are causing poor results.

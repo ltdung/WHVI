@@ -1,7 +1,7 @@
 In this report, we assess the reproducibility of the paper ``Walsh-Hadamard Variational Inference for Bayesian Deep Learning''~\cite{rossi2019walsh}.
 Our results are based on multiple readings of the original paper and its supplementary material, re-runs of the described experiments, as well as some key referenced literature~\cite{le2014fastfood, blundell2015weight, fino1976unified, kingma2015variational, rossi2019good}.
-This reproduction is not based on any published code, except the CUDA implementation of the fast Walsh Hadamard transform by the paper's authors.
-Our implementation of the proposed method, experiments and other related files are available at \url{https://github.com/davidnabergoj/WHVI}.
+This reproduction is not based on any published code, except the CUDA implementation of the fast Walsh-Hadamard transform by the paper's authors.
+Our implementation of the proposed method, experiments and other files are available at \url{https://github.com/davidnabergoj/WHVI}.
 
 \subsection{Brief review of the paper}\label{subsec:brief-review-of-the-paper}
 The authors propose Walsh-Hadamard Variational Inference (WHVI), where weight matrices in Bayesian neural networks are efficiently re-parameterized to allow for linear space complexity and log-linear time complexity when transforming an input vector with a WHVI layer.
@@ -37,6 +37,7 @@ We compare the speed of matrix multiplication and fast Walsh-Hadamard transform 
 We test the method across different random seeds to empirically assess stability and convergence.
 
 \subsection{Report structure}\label{subsec:report-structure}
-We describe our implementation of the proposed method in Section~\ref{sec:implementation-details}.  % TODO say more
-We compare our results to those in the original paper in Section~\ref{sec:model-testing}, where we discuss the inference process, predictive quality, and compute performance.
+We describe our implementation of the proposed method in Section~\ref{sec:implementation-details}.
+We compare our results to those in the original paper in Section~\ref{sec:model-testing}, where we discuss the predictive quality
+We compare our measurements of compute performance to the original ones in Section~\ref{sec:performance-testing}.
 In Section~\ref{sec:conclusion-and-discussion}, we conclude the report with an overall reproducibility assessment provide some suggestions for improvement.

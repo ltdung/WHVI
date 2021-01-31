@@ -10,14 +10,14 @@ We consequently cloned the input batch before using the transform, but this did 
 
 The CUDA implementation of FWHT was not explained in the original paper or the supplement.
 We adapted an implementation of the kernel from the original paper\footnote{See the repository for the paper at \url{https://github.com/srossi93/vardl} and a somewhat different implementation of the transform at \url{https://github.com/HazyResearch/structured-nets}.} and used it in our experiments.
-We suggest reading the paper by Bikov and Bouyukliev (2018)~\cite{bikov2018parallel} for a clear and concise FWHT implementation reference, as well as the detailed implementation strategies, described by Arndt (2010)~\cite{arndt2010matters}.
+We suggest the paper by Bikov and Bouyukliev (2018)~\cite{bikov2018parallel} for a clear and concise FWHT implementation reference, as well as the detailed implementation strategies, described by Arndt (2010)~\cite{arndt2010matters}.
 
 The following benchmarks were run on Windows 10 with an AMD Ryzen 9 3900X CPU and a GeForce RTX 2070S GPU\@.
 We noticed that using a non-vectorized Python/C++ CPU implementation of FWHT yielded consistently slower results than matrix multiplication on the CPU with no sign of change.
 However, a vectorized Python implementation yields the same results as those in the original paper, i.e.\ the tradeoff point occurs at approximately $D = 2^{11}$.
-The complete results are shown in Figure~\ref{fig:compute-performance}.
+The results are shown in Figure~\ref{fig:compute-performance}.
 
-\begin{figure}
+\begin{figure}[htb]
     \centering
     \includegraphics[width=\hsize]{img/compute-performance-all}
     \caption{

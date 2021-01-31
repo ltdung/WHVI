@@ -2,7 +2,7 @@ In this section, we describe our implementation of WHVI and list assumptions for
 We discuss the core classes, parameters, the prior, the fast Walsh-Hadamard transform (FWHT), and weight matrix sampling.
 \subsection{Core classes}\label{subsec:core-classes}
 We implemented WHVI in PyTorch~\cite{pytorch}, because it is also used in the original paper.
-One of the most important parts is the \texttt{WHVISquarePow2Matrix} class, which contains as parameters the elements of $\mathbf{S_1}$, $\mathbf{S_2}$, and the posterior mean $\mu$.
+The most important part is the \texttt{WHVISquarePow2Matrix} class, which contains as parameters the elements of $\mathbf{S}_1$, $\mathbf{S}_2$, and the posterior mean $\mu$.
 It does not explicitly include elements of the diagonal covariance matrix $\Sigma$, but instead stores a parameter vector $\rho$ with $D$ elements, which corresponds to $\Sigma$ via a softplus transformation: $\Sigma = \mathrm{diag}(\sigma_1, \dots, \sigma_D)$ where $\sigma_i = \ln(1 + \exp(\rho_i))$.
 
 The authors do not state how they represent $\Sigma$.
@@ -11,7 +11,15 @@ The advantage is that we can optimize $\rho_i$ across the real line and disregar
 We acknowledge that the referenced work uses softplus for individual elements of the weight matrix, whereas we use it for elements of vector $\mathbf{g}$, which is indirectly related to the weight matrix via Equation~\ref{eqn:weight-sampling}.
 
 To transform a batch of input vectors, a weight matrix is sampled from the posterior according to Equation~\ref{eqn:weight-sampling} and multiplied by the matrix of the batch.
-See Subsection~\ref{subsec:sampling-the-weight-matrix} for details.
+We implemented two options for this transformation.
+In the first, we sample the weight matrix directly according to Equation~\ref{eqn:weight-sampling}.
+In the second, we use the local re-parameterization trick to sample the matrix-vector product $\mathbf{W}\mathbf{x} \in \mathbb{R}^D$ according to Equations~\ref{eqn:lrt1} and~\ref{eqn:lrt2}.
+\begin{align}
+    \mathbf{W}\mathbf{x} = \overline{\mathbf{W}}(\mathbf{\mu})\mathbf{x} + \overline{\mathbf{W}}(\mathbf{\Sigma}^{1/2}\mathbf{\epsilon})\mathbf{x}, \; \epsilon \sim \mathrm{N}(\mathbf{0}, \mathbf{I}_D)\label{eqn:lrt1},\\
+    \overline{\mathbf{W}}(u) = \mathbf{S}_1 \mathbf{H} \mathrm{diag}(\mathbf{u}) \mathbf{H} \mathbf{S}_2\label{eqn:lrt2}
+\end{align}
+We use the second option as it is not too slow when compared to the first.
+For example, the number of epochs per second decreases from 190 to 155 on the toy dataset from Section 3.1 of the original paper.
 
 The \texttt{WHVIStackedMatrix} class represents matrices of arbitrary size.
 It identifies how many smaller matrices of type \texttt{WHVISquarePow2Matrix} need to be stacked together to allow for the desired matrix multiplication, as well as the necessary padding of the input vector (see Algorithm 1 in the original report).
@@ -32,10 +40,8 @@ The KL divergence of a \texttt{WHVILinear} layer is the sum of KL divergence ter
 \subsection{Fast Walsh-Hadamard transform}\label{subsec:fast-walsh-hadamard-transform}
 An important contribution of the paper is the use of fast Walsh-Hadamard transform (FWHT)~\cite{fino1976unified}, which allows for log-linear vector transformation time.
 We implemented the transform in Python and C++, both implementations can be used on the CPU and the GPU\@.
-We also adapted and tested a CUDA kernel implementation, which is considerably faster than the Python and C++ implementations on the GPU, but achieves speeds that are similar to the CPU implementations for $D \approx 2^7$.
-This was also observed by the authors.
-
-% TODO speed comparison plots
+We also adapted and tested a CUDA kernel implementation, which is considerably faster than the Python and C++ implementations on the GPU\@.
+The performance is described more thoroughly in Section~\ref{fig:compute-performance} with additional comparisons to regular matrix multiplication.
 
 \subsection{Priors and parameter initializations}\label{subsec:priors-and-parameter-initializations}
 According to the supplementary material for the original paper, we use a zero-mean prior with fully factorized covariance $\lambda \mathbf{I}$ for a particular layer, i.e. $\mathcal{N}(\mathbf{0}, \mathrm{diag}(\lambda, \dots, \lambda)$ for a chosen $\lambda > 0$.
@@ -44,24 +50,8 @@ We believe that the original paper should describe the choices of prior variance
 Currently, the supplement seems to suggest that a constant $\lambda = 10^{-5}$ was used in all layers of the deep Bayesian networks, but this is likely not the case.
 Good choices of $\lambda$ are essential at each layer separately.
 We have found that with such a small prior covariance, the predictions are typically just the mean.
-However, by reconsidering the statement in the supplement, we may interpret it as putting a low prior covariance on the last layer and possibly higher ones on the previous layers.
-This indeed substantially improves the results of the experiments.
+By reconsidering the statement in the supplement, we may interpret it as putting a low prior covariance on the last layer and possibly higher ones on the previous layers.
+The difference in the results is minor.
 
-The authors did not describe the initialization of $\mathbf{S_1}$, $\mathbf{S_2}$, $\Sigma$.
-We draw initial elements of $\mathbf{S_1}$ and $\mathbf{S_2}$ i.i.d.\ from a standard normal distribution and initial elements of $\rho$ i.i.d.\ from Uniform$(-3, -2)$.
-
-\subsection{Sampling the weight matrix}\label{subsec:sampling-the-weight-matrix}
-We implemented two forward pass options.
-In the first, we sample the weight matrix directly according to Equation~\ref{eqn:weight-sampling}.
-In the second, we use the local re-parameterization trick to sample the matrix-vector product $\mathbf{W}\mathbf{x} \in \mathbb{R}^D$ according to Equations~\ref{eqn:lrt1} and~\ref{eqn:lrt2}.
-
-\begin{align}
-    \mathbf{W}\mathbf{x} = \overline{\mathbf{W}}(\mathbf{\mu})\mathbf{x} + \overline{\mathbf{W}}(\mathbf{\Sigma}^{1/2}\mathbf{\epsilon})\mathbf{x}, \; \epsilon \sim \mathrm{N}(\mathbf{0}, \mathbf{I}_D)\label{eqn:lrt1},\\
-    \overline{\mathbf{W}}(u) = \mathbf{S_1} \mathbf{H} \mathrm{diag}(\mathbf{u}) \mathbf{H} \mathbf{S_2}\label{eqn:lrt2}
-\end{align}
-
-We explicitly build the Walsh-Hadamard matrix $\mathbf{H}$ on the CPU when $D < 2^{11}$.
-Like the authors, we found this to be a good trade-off point.
-For $D \ge 2^{11}$, we use the FWHT on the CPU\@.
-We always use the FWHT on the GPU, as it is faster than matrix multiplication.
-This agrees with the findings from the original paper.
+The authors did not describe the initialization of $\mathbf{S}_1$, $\mathbf{S}_2$, $\Sigma$.
+We draw initial elements of $\mathbf{S}_1$ and $\mathbf{S}_2$ i.i.d.\ from $\mathrm{N}(0, 0.01)$ and initial elements of $\rho$ i.i.d.\ from Uniform$(-3, -2)$.
