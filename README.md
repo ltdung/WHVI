@@ -1,18 +1,18 @@
 # WHVI: Walsh-Hadamard Variational Inference for Bayesian Deep Learning
 
 Reproduction of the paper [Walsh-Hadamard Variational Inference for Bayesian Deep Learning](https://proceedings.neurips.cc//paper/2020/hash/6df182582740607da754e4515b70e32d-Abstract.html).
-This code is a work-in-progress and is unfinished as of the latest update (2021/01/20).
+We aim to update this repository as more material about the method is released.
 
 The repository is organized as follows:
 * `src` contains the source code for the core WHVI functionality;
 * `test` contains unit tests for manually implemented functions;
 * `benchmarks` contains speed tests for manually implemented functions;
 * `experiments` contains reproductions of the experiments from the original paper;
-* `report` contains a reproducibility report.
+* `report` contains a reproducibility [report](./report/main.pdf).
 
 ## Example
 The snippet below illustrates the use of a feed-forward regression network that uses WHVI layers.
-It also is possible to seamlessly add standard modules like `nn.Linear` layers.
+It also is possible to add standard modules like `nn.Linear` layers.
 See the [Toy example](./experiments/Toy%20example.ipynb) notebook for additional information.
 
 ```python

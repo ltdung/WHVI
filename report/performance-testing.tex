@@ -9,7 +9,7 @@ We found that using in-place operations caused problems in the PyTorch automatic
 We consequently cloned the input batch before using the transform, but this did not noticeably decrease processing speed.
 
 The CUDA implementation of FWHT was not explained in the original paper or the supplement.
-We adapted an implementation of the kernel from the original paper\footnote{See the repository for the paper at \url{https://github.com/srossi93/vardl} and a somewhat different implementation of the transform at \url{https://github.com/HazyResearch/structured-nets}.} and used it in our experiments.
+We adapted an implementation of the kernel from the original paper\footnote{See the paper's repository at \url{https://github.com/srossi93/vardl} and a different implementation of the transform at \url{https://github.com/HazyResearch/structured-nets}.} and used it in our experiments.
 We suggest the paper by Bikov and Bouyukliev (2018)~\cite{bikov2018parallel} for a clear and concise FWHT implementation reference, as well as the detailed implementation strategies, described by Arndt (2010)~\cite{arndt2010matters}.
 
 The following benchmarks were run on Windows 10 with an AMD Ryzen 9 3900X CPU and a GeForce RTX 2070S GPU\@.
