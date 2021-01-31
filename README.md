@@ -1,7 +1,7 @@
 # WHVI: Walsh-Hadamard Variational Inference for Bayesian Deep Learning
 
 Reproduction of the paper [Walsh-Hadamard Variational Inference for Bayesian Deep Learning](https://proceedings.neurips.cc//paper/2020/hash/6df182582740607da754e4515b70e32d-Abstract.html).
-We aim to update this repository as more material about the method is released.
+We will continue to update this repository as more material about the method is released.
 
 The repository is organized as follows:
 * `src` contains the source code for the core WHVI functionality;
@@ -56,15 +56,12 @@ error, mnll = model.eval_model(x_test, y_test)
 ## Setup instructions
 Type the following commands into a terminal:
 ```
-conda env create -f environment.yml                         # Create the conda environment
-cd src/fwht/cpp && python setup.py install || cd ../../..   # Compile C++ FWHT functions
-cd src/fwht/cuda && python setup.py install || cd ../../..  # Compile CUDA kernel for FWHT
+conda env create -f environment.yml                  # Create the conda environment
+cd src/fwht/cpp  && python setup.py install || cd -  # Compile C++ FWHT functions
+cd src/fwht/cuda && python setup.py install || cd -  # Compile CUDA kernel for FWHT
 ```
-The main dependency is PyTorch.
-We use sklearn, numpy, pandas, and xlrd to evaluate models on standard datasets.
-Notebooks can be viewed after installing jupyter.
-We show progress bars during model training using tqdm.
-
+This will create a conda environment called `WHVI` and compile the C++ and CUDA versions of the fast Walsh-Hadamard transform.
+The C++ version is currently only used for testing, whereas the CUDA version is necessary to run the models on the GPU.
 
 ## References
 * [Variational Deep Learning package](https://github.com/srossi93/vardl) (code implementation by the original authors)
