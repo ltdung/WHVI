@@ -1,7 +1,8 @@
 #include <torch/extension.h>
 
 torch::Tensor fwht(torch::Tensor x_in) {
-    torch::Tensor x = torch::clone(x_in);  // NOT IN PLACE! If we skip this line, then autograd gets messed up. FIXME.
+    torch::Tensor x = torch::clone(x_in);  // NOT IN PLACE! If we skip this line, then autograd gets messed up.
+    assert (x.dim() == 2);
     int n = x.size(1);
     x = x.transpose(0, 1);  // Flip dimensions
     int h = 1;

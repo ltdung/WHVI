@@ -3,7 +3,7 @@ import torch
 import torch.nn as nn
 from torch.autograd import Function
 
-from src.utils import build_H
+from src.utils import build_H, is_pow_of_2
 
 
 class WHT_matmul:
@@ -21,8 +21,12 @@ class WHT_matmul:
         :param torch.Tensor x: inputs of shape (batch_size, D)
         :return: transformed inputs, multiplied by H.
         """
+
+        D = x.size()[1]
+        assert is_pow_of_2(D)
+        assert x.dim() == 2
+
         if not self.H_built:
-            D = x.size()[1]
             self.H = build_H(D, x.device)
             self.H_built = True
         return (self.H @ x.T).T
@@ -34,15 +38,19 @@ class FWHTFunction(Function):
     """
 
     @staticmethod
-    def transform(x_in: torch.Tensor):
+    def transform(x: torch.Tensor):
         """
         Vectorized batched fast Walsh-Hadamard transform (FWHT).
 
-        :param torch.Tensor x_in: tensor of inputs
+        :param torch.Tensor x: tensor of inputs
         :return: transformed inputs according to FWHT.
         """
-        x_out = x_in.unsqueeze(2)
-        for _ in range(int(math.log2(x_in.shape[1])))[::-1]:
+        D = x.size()[1]
+        assert is_pow_of_2(D)
+        assert x.dim() == 2
+
+        x_out = x.unsqueeze(2)
+        for _ in range(int(math.log2(x.shape[1])))[::-1]:
             x_out = torch.cat((x_out[:, ::2] + x_out[:, 1::2], x_out[:, ::2] - x_out[:, 1::2]), dim=2)
         return x_out.squeeze(1)
 

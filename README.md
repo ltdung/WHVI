@@ -56,9 +56,9 @@ error, mnll = model.eval_model(x_test, y_test)
 ## Setup instructions
 Type the following commands into a terminal:
 ```
-conda env create -f environment.yml                  # Create the conda environment
-cd src/fwht/cpp  && python setup.py install || cd -  # Compile C++ FWHT functions
-cd src/fwht/cuda && python setup.py install || cd -  # Compile CUDA kernel for FWHT
+conda env create -f environment.yml                         # Create the conda environment
+cd src/fwht/cpp  && python setup.py install || cd ../../..  # Compile C++ FWHT functions
+cd src/fwht/cuda && python setup.py install || cd ../../..  # Compile CUDA kernel for FWHT
 ```
 This will create a conda environment called `WHVI` and compile the C++ and CUDA versions of the fast Walsh-Hadamard transform.
 The C++ version is currently only used for testing, whereas the CUDA version is necessary to run the models on the GPU.
