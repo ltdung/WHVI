@@ -15,6 +15,7 @@ The variational posterior distribution $q$ is a multivariate normal distribution
 
 This approach offers an advantage over other approaches like Mean field Gaussian variational inference, because it requires $O(D)$ instead of $O(D^2)$ parameters to represent weight matrices of size $D \times D$.
 Furthermore, the matrix-vector product $\mathbf{Hx}$ can be computed in $O(D \log D)$ time and $O(1)$ space using the in-place version of the Fast Walsh-Hadamard transform.
+The reduced number of parameters causes the KL term to be less dominant during model training, which is otherwise a common problem in Bayesian deep learning.
 The described approach supports matrices of size $D \times D$ where $D = 2^p$ for $p > 0$ in its most basic form, however it is extended to support matrices of arbitrary size by concatenating smaller square matrices.
 
 WHVI is applied to a toy example, several regression data sets, and is also tested on image classification tasks using Bayesian convolutional neural networks.

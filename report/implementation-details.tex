@@ -22,7 +22,7 @@ The inputs are padded as necessary.
 As a special case, we also implement the \texttt{WHVIColumnMatrix} class, which transforms a batch of input vectors with a single element into a batch of output vectors with many elements.
 It includes a smaller \texttt{WHVISquarePow2Matrix}, which is sampled at input transformation time and reshaped into a column.
 The last few elements of this column may be removed to accommodate for the desired output size.
-This method is recommended in the paper and indeed reduces the number of parameters from $O(D)$ to $O\left(\sqrt{D}\right)$, while also reducing the single-vector transform time complexity from $O(D\log D)$ to $O\left(\sqrt{D}\log D\right)$.
+This method is recommended in the paper and indeed reduces the number of parameters from $O(D)$ to $O(\sqrt{D})$, while also reducing the single-vector transform time complexity from $O(D\log D)$ to $O(\sqrt{D}\log D)$.
 Note that by transposing the sampled matrix, this class can be used to map many inputs to a single output.
 
 Finally, we create a \texttt{WHVILinear} layer class, which automatically selects the appropriate matrix based on the desired input and output dimensionalities.

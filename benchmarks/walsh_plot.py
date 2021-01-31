@@ -7,7 +7,7 @@ from matplotlib import rc
 from src.utils import build_H
 
 import src.fwht.cpp.fwht as cpp_fwht
-# import src.fwht.python.fwht_baseline as python_fwht
+import src.fwht.python.fwht_baseline as python_fwht
 import src.fwht.cuda.fwht as cuda_fwht
 
 """
@@ -63,6 +63,7 @@ print(matmul_cpu_times)
 print(matmul_gpu_times)
 
 fwht_cpu_times = [time_fwht(2 ** p, torch.device('cpu'), cpp_fwht.FWHTFunction.apply) for p in log2D_list]
+fwht_cpu_vectorized_times = [time_fwht(2 ** p, torch.device('cpu'), python_fwht.FWHTFunction.apply) for p in log2D_list]
 fwht_gpu_times = [time_fwht(2 ** p, torch.device('cuda'), cuda_fwht.FWHTFunction.apply) for p in log2D_list]
 print(fwht_cpu_times)
 print(fwht_gpu_times)
@@ -70,6 +71,7 @@ print(fwht_gpu_times)
 plt.figure()
 plt.plot(log2D_list, matmul_cpu_times, label='matmul (CPU)')
 plt.plot(log2D_list, fwht_cpu_times, label='FWHT (CPU)')
+plt.plot(log2D_list, fwht_cpu_vectorized_times, label='FWHT (CPU, vectorized)')
 plt.plot(log2D_list, matmul_gpu_times, label='matmul (GPU)')
 plt.plot(log2D_list, fwht_gpu_times, label='FWHT (GPU)')
 plt.title('Regular-scale computation time comparison')
@@ -79,17 +81,17 @@ plt.show()
 rc('font', **{'family': 'sans-serif', 'sans-serif': ['Helvetica']})
 rc('text', usetex=True)
 plt.figure()
-plt.plot(log2D_list, np.log1p(matmul_cpu_times), label='matmul (CPU)')
-plt.plot(log2D_list, np.log1p(fwht_cpu_times), label='FWHT (CPU)')
-plt.plot(log2D_list, np.log1p(matmul_gpu_times), label='matmul (GPU)')
-plt.plot(log2D_list, np.log1p(fwht_gpu_times), label='FWHT (GPU)')
+plt.plot(log2D_list, np.log(matmul_cpu_times), label='matmul (CPU)')
+plt.plot(log2D_list, np.log(fwht_cpu_times), label='FWHT (CPU)')
+plt.plot(log2D_list, np.log(fwht_cpu_vectorized_times), label='FWHT (CPU, vectorized)')
+plt.plot(log2D_list, np.log(matmul_gpu_times), label='matmul (GPU)')
+plt.plot(log2D_list, np.log(fwht_gpu_times), label='FWHT (GPU)')
 plt.xticks(log2D_list, list(map(lambda x: '$2^{%d}$' % x, log2D_list)))
 plt.yscale('log')
-plt.title('Log-scale computation time comparison')
 plt.xlabel('Dimension')
-plt.ylabel('Time [ns, log1p scale]')
-plt.title('Performance on 1000 trials of $\mathbf{HA}$\nand FWHT($\mathbf{A}$) with $D=512$, batch size $512$')
+plt.ylabel('Time [ns, log-scale]')
+plt.title('Performance on 1000 trials of $\mathbf{HA}$\nand FWHT($\mathbf{A}$) with batch size 512')
 plt.legend()
 plt.tight_layout()
-plt.savefig('compute-performance_cpp.pdf')
+plt.savefig('compute-performance-all.pdf')
 plt.show()
