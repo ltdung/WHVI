@@ -6,14 +6,11 @@ import torch.nn as nn
 
 class FWHTFunction(Function):
     @staticmethod
-    def transform(u):
-        n = u.shape[-1]
-        m = int(math.log2(n))
-        x = u.unsqueeze(-1)
-        for _ in range(m)[::-1]:
-            x = torch.cat((x[..., ::2, :] + x[..., 1::2, :], x[..., ::2, :] - x[..., 1::2, :]), dim=-1)
-        x = x.squeeze(-2)
-        return x
+    def transform(x_in):
+        x_out = x_in.unsqueeze(2)
+        for _ in range(int(math.log2(x_in.shape[1])))[::-1]:
+            x_out = torch.cat((x_out[:, ::2] + x_out[:, 1::2], x_out[:, ::2] - x_out[:, 1::2]), dim=2)
+        return x_out.squeeze(1)
 
     @staticmethod
     def forward(ctx, x):
