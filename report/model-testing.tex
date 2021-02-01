@@ -21,14 +21,17 @@ This function is visualized in Figure~\ref{fig:toy-function}.
 
 The cosine activation function is no longer suitable given this different form of the function.
 We check this by training a non-Bayesian model, which has the exact same architecture as the WHVI one (two hidden layers with 128 hidden units).
-We found that the sigmoid activation performs slightly better and decided to use it in the WHVI experiment instead.
+We found that the sigmoid activation performs better and decided to use it in the WHVI experiment instead.
 A comparison of the two non-Bayesian models with different activations can be seen in Figure~\ref{fig:toy-function-non-bayesian}.
 
 \begin{figure}[htb]
     \centering
     \includegraphics[width=1.0\hsize]{img/toy-function-non-bayesian}
-    \caption{Comparison of the cosine and the sigmoid activation in a non-bayesian network.
-    We decided to use sigmoid instead of cosine, because it seemed to capture the function more nicely on the left chunk of the data.}
+    \caption{
+        Comparison of the cosine and the sigmoid activation in a non-bayesian network.
+        We decided to use sigmoid instead of cosine, because it seemed to capture the function more nicely on the left chunk of the data.
+        The overfitting is deliberate and shows that a neural network has difficulties with cosine, but not with sigmoid as its activation.
+    }
     \label{fig:toy-function-non-bayesian}
 \end{figure}
 
@@ -55,7 +58,7 @@ After optimization, we observed several times that all but one pair of $\mu$ and
 This suggested that the KL term was too dominant and drew the variational posterior too close to the prior.
 
 The authors also state that they obtained a model with 1541 parameters for the toy example, however we obtained one with 1537 parameters.
-We were not able to identify the missing parameters and we believe that they are not hyperparameters, because the authors refer to hyperparameters separately in a Supplement section (i.e.\ not as ``parameters'').
+We were not able to identify the missing parameters and we believe that they are not hyperparameters, because the authors refer to hyperparameters separately in a supplement section (i.e.\ not as ``parameters'').
 We believe that these missing parameters are the primary reason for the observed problems in our experiments, since experimenting with a wide variety of different settings and initializations for $\lambda_i, \sigma_0, \rho, \mathbf{S}_1$, and $\mathbf{S}_2$ did not improve the results.
 
 As an attempt to improve performance, we added bias columns (to be optimized) to WHVI layers.
@@ -67,7 +70,7 @@ To conclude, we were not able to reproduce the uncertainty estimates, presented 
 
 \subsection{Regression experiments}\label{subsec:regression-experiments}
 This section refers to experiments in section 3.2 and Table 3 of the original paper.
-We use the experimental setup as described in section 3.2 of the original paper and section D.1 of the Supplement.
+We use the experimental setup as described in section 3.2 of the original paper and section D.1 of the supplement.
 Again, the paper does not state the prior covariances $\lambda$ except for the last layer, where $\lambda = 10^{-5}$.
 We choose $\lambda = 3$ for all previous layers.
 
@@ -84,7 +87,7 @@ The comparison between our results and the ones from the paper are presented in 
     \caption{
         WHVI regression experiments results.
         RMSE and MNLL are computed on test data sets.
-        The result format is \textit{mean (std)}, where the sample mean and standard deviation are computed across 8 independent random train-test splits of the data sets.
+        The result format is \textit{mean (std)}, where the sample mean and standard deviation are computed across eight independent random 9:1 train-test splits of the data sets.
         We used $\lambda_1=\lambda_2=3,\lambda_3=10^{-5}$ on all data sets.
         We only ran KIN8NM for one iteration that took 35 hours, however it was clear from this result and the others that the described method will not achieve the necessary results.
         For this reason, we also skipped the Naval, Power plant, and Protein data sets.

@@ -13,8 +13,8 @@ The key idea is that weight matrices can be efficiently sampled by
 Here, $\widetilde{\mathbf{W}}$ is a $D \times D$ weight matrix sample, $\mathbf{S_1}$ and $\mathbf{S_2}$ are deterministic diagonal matrices whose entries need to be optimized, $\mathbf{H}$ is the Walsh-Hadamard matrix, and $\widetilde{\mathbf{g}}$ is a sample from the distribution $q$.
 The variational posterior distribution $q$ is a multivariate normal distribution with a diagonal covariance matrix, i.e.\ $q(\mathbf{g}) = \mathcal{N}(\mathbf{\mu}, \mathbf{\Sigma})$.
 
-This approach offers an advantage over other approaches like Mean field Gaussian variational inference, because it requires $O(D)$ instead of $O(D^2)$ parameters to represent weight matrices of size $D \times D$.
-Furthermore, the matrix-vector product $\mathbf{Hx}$ can be computed in $O(D \log D)$ time and $O(1)$ space using the in-place version of the Fast Walsh-Hadamard transform.
+This approach offers an advantage over other approaches like mean-field Gaussian variational inference, because it requires $O(D)$ instead of $O(D^2)$ parameters to represent weight matrices of size $D \times D$.
+Furthermore, the matrix-vector product $\mathbf{Hx}$ can be computed in $O(D \log D)$ time and $O(1)$ space using the in-place version of the Fast Walsh-Hadamard transform (FWHT).
 The reduced number of parameters causes the KL term to be less dominant during model training, which is otherwise a common problem in Bayesian deep learning.
 The described approach supports matrices of size $D \times D$ where $D = 2^p$ for $p > 0$ in its most basic form, however it is extended to support matrices of arbitrary size by concatenating smaller square matrices.
 
@@ -33,7 +33,7 @@ We believe they are not crucial to assessing the quality of the proposed approac
 We focus only on mean-field WHVI and not on the version involving normalizing flows, which are mentioned as an extension to the proposed method.
 
 We attempt to reproduce the findings regarding WHVI inference time to a smaller degree, because the workstation used in the experiments of the original paper is significantly more powerful than the one we used in this reproduction study.
-We compare the speed of matrix multiplication and fast Walsh-Hadamard transform on the CPU and the GPU, but not the experiments regarding energy consumption.
+We compare the speed of matrix multiplication and FWHT on the CPU and the GPU, but not the experiments regarding energy consumption.
 We test the method across different random seeds to empirically assess stability and convergence.
 
 \subsection{Report structure}\label{subsec:report-structure}

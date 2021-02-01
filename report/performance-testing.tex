@@ -14,7 +14,7 @@ We suggest the paper by Bikov and Bouyukliev (2018)~\cite{bikov2018parallel} for
 
 The following benchmarks were run on Windows 10 with an AMD Ryzen 9 3900X CPU and a GeForce RTX 2070S GPU\@.
 We noticed that using a non-vectorized Python/C++ CPU implementation of FWHT yielded consistently slower results than matrix multiplication on the CPU with no sign of change.
-However, a vectorized Python implementation yields the same results as those in the original paper, i.e.\ the tradeoff point occurs at approximately $D = 2^{11}$.
+However, a vectorized Python implementation yields the same results as those in the original paper, i.e.\ the break-even point occurs at approximately $D = 2^{11}$.
 The results are shown in Figure~\ref{fig:compute-performance}.
 
 \begin{figure}[htb]
@@ -26,7 +26,7 @@ The results are shown in Figure~\ref{fig:compute-performance}.
         The vectors are arranged into the matrix $\mathbf{A}$.
         The vectorized CPU implementation beats matrix multiplication at around $D = 2^{11}$ in compute time, but the non-vectorized implementation is consistently worse.
         Both operations are much faster on the GPU, and FWHT outperforms matrix multiplications at moderate values of $D$.
-        These results agree with the ones in the Supplement for the original paper.
+        These results agree with the ones in the supplement for the original paper.
     }
     \label{fig:compute-performance}
 \end{figure}
